@@ -1,3 +1,12 @@
+## 1.1.0
+
+* Added `TrueIdSdk.launchHostedVerification()` — document capture + selfie with
+  liveness, review, and result via TrueID's hosted flow in a Chrome Custom Tab.
+  Same UI/UX as the TrueID web widget and hosted component.
+* Native dependency: switched primary Android repo from JitPack to the
+  self-hosted TrueID Maven repo (`https://app.trueid.info/sdk/android`),
+  matching `trueid-selfie-sdk` 2.3.0. JitPack kept as a fallback.
+
 ## 1.0.0
 
 * Initial release

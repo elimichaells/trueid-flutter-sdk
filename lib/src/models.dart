@@ -33,6 +33,9 @@ class VerificationConfig {
   /// Require face match on local lookups.
   final bool enforceFaceComparison;
 
+  /// Optional active-challenge liveness outcome supplied by the host app.
+  final bool? livenessPassed;
+
   /// Optional transaction type label for your records.
   final String? transactionType;
 
@@ -42,6 +45,7 @@ class VerificationConfig {
   const VerificationConfig({
     this.forceNia = false,
     this.enforceFaceComparison = true,
+    this.livenessPassed,
     this.transactionType,
     this.captureConfig = const SelfieCaptureConfig(),
   });
@@ -49,6 +53,7 @@ class VerificationConfig {
   Map<String, dynamic> toMap() => {
         'forceNia': forceNia,
         'enforceFaceComparison': enforceFaceComparison,
+        'livenessPassed': livenessPassed,
         'transactionType': transactionType,
         'captureMode': captureConfig.captureMode.name,
         'initialCamera': captureConfig.initialCamera.name,
@@ -57,6 +62,8 @@ class VerificationConfig {
         'outputWidth': captureConfig.outputWidth,
         'outputHeight': captureConfig.outputHeight,
         'jpegQuality': captureConfig.jpegQuality,
+        'burstFrameCount': captureConfig.burstFrameCount,
+        'burstFrameDelayMs': captureConfig.burstFrameDelayMs,
       };
 }
 
@@ -69,6 +76,8 @@ class SelfieCaptureConfig {
   final int outputWidth;
   final int outputHeight;
   final int jpegQuality;
+  final int burstFrameCount;
+  final int burstFrameDelayMs;
   final ResultFormat resultFormat;
 
   const SelfieCaptureConfig({
@@ -76,9 +85,11 @@ class SelfieCaptureConfig {
     this.initialCamera = CameraFacing.front,
     this.allowCameraSwitch = true,
     this.showFaceMesh = true,
-    this.outputWidth = 480,
-    this.outputHeight = 640,
-    this.jpegQuality = 92,
+    this.outputWidth = 600,
+    this.outputHeight = 800,
+    this.jpegQuality = 94,
+    this.burstFrameCount = 4,
+    this.burstFrameDelayMs = 90,
     this.resultFormat = ResultFormat.base64,
   });
 
@@ -90,6 +101,8 @@ class SelfieCaptureConfig {
         'outputWidth': outputWidth,
         'outputHeight': outputHeight,
         'jpegQuality': jpegQuality,
+        'burstFrameCount': burstFrameCount,
+        'burstFrameDelayMs': burstFrameDelayMs,
         'resultFormat': resultFormat.name,
       };
 }
@@ -166,8 +179,11 @@ class SelfieCaptureResult {
   /// Raw image bytes (when resultFormat includes BYTE_ARRAY or ALL).
   final List<int>? imageBytes;
 
-  /// Base64-encoded image (when resultFormat includes BASE64 or ALL).
+  /// Base64-encoded principal selfie (when resultFormat includes BASE64 or ALL).
   final String? base64;
+
+  /// Base64-encoded burst frames captured around the principal selfie.
+  final List<String>? burstFrames;
 
   /// File path to saved image (when resultFormat includes FILE_PATH or ALL).
   final String? filePath;
@@ -175,6 +191,7 @@ class SelfieCaptureResult {
   const SelfieCaptureResult({
     this.imageBytes,
     this.base64,
+    this.burstFrames,
     this.filePath,
   });
 
@@ -182,9 +199,108 @@ class SelfieCaptureResult {
     return SelfieCaptureResult(
       imageBytes: (map['imageBytes'] as List<dynamic>?)?.cast<int>(),
       base64: map['base64'] as String?,
+      burstFrames: (map['burstFrames'] as List<dynamic>?)?.cast<String>(),
       filePath: map['filePath'] as String?,
     );
   }
+}
+
+/// Configuration for the hosted verification flow — document capture + selfie
+/// with liveness, opened in a Chrome Custom Tab. Same UI/UX as the TrueID web
+/// widget and hosted component.
+///
+/// Two ways to provide a session:
+///
+/// 1. **Backend-created session (recommended):** create a widget session from
+///    your backend (`POST /api/widget-sessions`) and pass its [sessionUrl] and
+///    [sessionToken] here. Your API key never ships in the app.
+///
+/// 2. **SDK-created session:** leave [sessionUrl] null and the SDK creates the
+///    session with the key from [TrueIdSdk.initialize]. Use a publishable
+///    (`pk_...`) key for this.
+class HostedVerificationConfig {
+  /// Hosted verification URL from a backend-created session.
+  final String? sessionUrl;
+
+  /// Session token matching [sessionUrl]; used to watch for completion.
+  final String? sessionToken;
+
+  /// Flow when the SDK creates the session: "standard", "pin_selfie" or "identity_lookup".
+  final String mode;
+
+  /// Preselected document type (e.g. "ghana_card", "auto").
+  final String? documentType;
+
+  /// "light", "dark" or "auto".
+  final String? theme;
+
+  /// Your own correlation id, echoed back on the scan record.
+  final String? referenceId;
+
+  /// How long to keep watching for a result after the browser tab closes, in milliseconds.
+  final int completionGraceMillis;
+
+  const HostedVerificationConfig({
+    this.sessionUrl,
+    this.sessionToken,
+    this.mode = 'standard',
+    this.documentType,
+    this.theme,
+    this.referenceId,
+    this.completionGraceMillis = 4000,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'sessionUrl': sessionUrl,
+        'sessionToken': sessionToken,
+        'mode': mode,
+        'documentType': documentType,
+        'theme': theme,
+        'referenceId': referenceId,
+        'completionGraceMillis': completionGraceMillis,
+      };
+}
+
+/// Result of a hosted verification flow.
+///
+/// When [isSuccess] is true, exchange [scanRecordId] (or [sessionToken]) for
+/// the full verification record from your backend using your secret key:
+/// `GET /api/v1/scan-records/{scanRecordId}`.
+class HostedVerificationResult {
+  final bool isSuccess;
+
+  /// Final session status: COMPLETED, EXPIRED, CANCELLED or FAILED.
+  final String status;
+
+  /// Scan record id to retrieve full results server-side.
+  final String? scanRecordId;
+
+  /// The widget session token.
+  final String? sessionToken;
+
+  final String? errorMessage;
+
+  const HostedVerificationResult({
+    required this.isSuccess,
+    required this.status,
+    this.scanRecordId,
+    this.sessionToken,
+    this.errorMessage,
+  });
+
+  factory HostedVerificationResult.fromMap(Map<dynamic, dynamic> map) {
+    return HostedVerificationResult(
+      isSuccess: map['isSuccess'] as bool? ?? false,
+      status: map['status'] as String? ?? 'FAILED',
+      scanRecordId: map['scanRecordId'] as String?,
+      sessionToken: map['sessionToken'] as String?,
+      errorMessage: map['errorMessage'] as String?,
+    );
+  }
+
+  @override
+  String toString() =>
+      'HostedVerificationResult(status: $status, isSuccess: $isSuccess, scanRecordId: $scanRecordId)';
 }
 
 /// Error from the TrueID SDK.

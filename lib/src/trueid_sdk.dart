@@ -82,4 +82,50 @@ class TrueIdSdk {
       );
     }
   }
+
+  /// Launch the hosted verification flow — document capture + selfie with
+  /// liveness, review, and result — opened in a Chrome Custom Tab. Same
+  /// UI/UX as the TrueID web widget and hosted component.
+  ///
+  /// Unlike [verify] and [captureSelfie], this never returns `null`; check
+  /// [HostedVerificationResult.status] for `"CANCELLED"`.
+  ///
+  /// ```dart
+  /// final result = await TrueIdSdk.launchHostedVerification(
+  ///   config: HostedVerificationConfig(mode: 'standard'),
+  /// );
+  ///
+  /// if (result.isSuccess) {
+  ///   // Send result.scanRecordId to your backend, then fetch the full
+  ///   // record with your secret key: GET /api/v1/scan-records/{id}
+  /// }
+  /// ```
+  ///
+  /// For production-grade key hygiene, create the session from your backend
+  /// (`POST /api/widget-sessions` with your API key) and pass only the
+  /// session url + token:
+  ///
+  /// ```dart
+  /// TrueIdSdk.launchHostedVerification(
+  ///   config: HostedVerificationConfig(sessionUrl: url, sessionToken: token),
+  /// );
+  /// ```
+  static Future<HostedVerificationResult> launchHostedVerification({
+    HostedVerificationConfig config = const HostedVerificationConfig(),
+  }) async {
+    try {
+      final result = await _channel.invokeMethod(
+        'launchHostedVerification',
+        config.toMap(),
+      );
+      return HostedVerificationResult.fromMap(
+        Map<dynamic, dynamic>.from(result),
+      );
+    } on PlatformException catch (e) {
+      throw TrueIdException(
+        code: e.code,
+        message: e.message ?? 'Hosted verification failed',
+      );
+    }
+  }
 }

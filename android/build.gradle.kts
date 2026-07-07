@@ -27,9 +27,15 @@ android {
 repositories {
     google()
     mavenCentral()
+    maven { url = uri("https://app.trueid.info/sdk/android") }
     maven { url = uri("https://jitpack.io") }
 }
 
 dependencies {
-    implementation("com.github.elimichaells:trueid-selfie-sdk:2.0.4")
+    val localSelfieSdk = findProject(":trueid-selfie-sdk")
+    if (localSelfieSdk != null) {
+        add("implementation", localSelfieSdk)
+    } else {
+        add("implementation", "com.trueid.sdk:trueid-selfie-sdk:2.3.0")
+    }
 }

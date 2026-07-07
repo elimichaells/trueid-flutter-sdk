@@ -1,8 +1,26 @@
 package com.trueid.sdk.flutter
 
 import android.app.Activity
-import com.trueid.sdk.selfie.*
-import com.trueid.sdk.selfie.internal.VerificationActivity
+import android.content.Intent
+import androidx.activity.ComponentActivity
+import com.trueid.sdk.selfie.CameraFacing
+import com.trueid.sdk.selfie.CaptureMode
+import com.trueid.sdk.selfie.HostedVerificationCallback
+import com.trueid.sdk.selfie.HostedVerificationConfig
+import com.trueid.sdk.selfie.HostedVerificationResult
+import com.trueid.sdk.selfie.ResultFormat
+import com.trueid.sdk.selfie.SelfieCaptureCallback
+import com.trueid.sdk.selfie.SelfieCaptureConfig
+import com.trueid.sdk.selfie.SelfieCaptureError
+import com.trueid.sdk.selfie.SelfieCaptureResult
+import com.trueid.sdk.selfie.TrueIDHostedVerification
+import com.trueid.sdk.selfie.TrueIDSdk
+import com.trueid.sdk.selfie.TrueIDSelfieCapture
+import com.trueid.sdk.selfie.TrueIDVerification
+import com.trueid.sdk.selfie.VerificationCallback
+import com.trueid.sdk.selfie.VerificationConfig
+import com.trueid.sdk.selfie.VerificationError
+import com.trueid.sdk.selfie.VerificationResult
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -10,11 +28,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import android.content.Intent
-import android.os.Build
-import androidx.activity.ComponentActivity
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 
 class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var channel: MethodChannel
@@ -57,6 +70,7 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "initialize" -> handleInitialize(call, result)
             "verify" -> handleVerify(call, result)
             "captureSelfie" -> handleCaptureSelfie(call, result)
+            "launchHostedVerification" -> handleLaunchHostedVerification(call, result)
             else -> result.notImplemented()
         }
     }
@@ -91,8 +105,8 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     private fun handleVerify(call: MethodCall, result: Result) {
         val currentActivity = activity
-        if (currentActivity == null) {
-            result.error("NO_ACTIVITY", "Plugin is not attached to an activity", null)
+        if (currentActivity !is ComponentActivity) {
+            result.error("INCOMPATIBLE_ACTIVITY", "Activity must be a ComponentActivity", null)
             return
         }
 
@@ -106,6 +120,7 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         val config = VerificationConfig(
             forceNia = call.argument<Boolean>("forceNia") ?: false,
             enforceFaceComparison = call.argument<Boolean>("enforceFaceComparison") ?: true,
+            livenessPassed = call.argument<Boolean>("livenessPassed"),
             transactionType = call.argument<String>("transactionType"),
             captureConfig = SelfieCaptureConfig(
                 captureMode = when (call.argument<String>("captureMode")) {
@@ -118,18 +133,16 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 },
                 allowCameraSwitch = call.argument<Boolean>("allowCameraSwitch") ?: true,
                 showFaceMesh = call.argument<Boolean>("showFaceMesh") ?: true,
-                outputWidth = call.argument<Int>("outputWidth") ?: 480,
-                outputHeight = call.argument<Int>("outputHeight") ?: 640,
-                jpegQuality = call.argument<Int>("jpegQuality") ?: 92,
+                outputWidth = call.argument<Int>("outputWidth") ?: 600,
+                outputHeight = call.argument<Int>("outputHeight") ?: 800,
+                jpegQuality = call.argument<Int>("jpegQuality") ?: 94,
+                burstFrameCount = call.argument<Int>("burstFrameCount") ?: 4,
+                burstFrameDelayMs = (call.argument<Int>("burstFrameDelayMs") ?: 90).toLong(),
                 resultFormat = ResultFormat.BASE64,
             ),
         )
 
-        val intent = Intent(currentActivity, VerificationActivity::class.java).apply {
-            putExtra(VerificationActivity.EXTRA_VERIFICATION_CONFIG, config)
-        }
-
-        VerificationActivity.pendingCallback = object : VerificationCallback {
+        val callback = object : VerificationCallback {
             override fun onCompleted(verificationResult: VerificationResult) {
                 val map = hashMapOf<String, Any?>(
                     "verified" to verificationResult.verified,
@@ -170,7 +183,7 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             }
         }
 
-        currentActivity.startActivity(intent)
+        TrueIDVerification.launch(currentActivity, config, callback)
     }
 
     private fun handleCaptureSelfie(call: MethodCall, result: Result) {
@@ -187,8 +200,7 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
         pendingResult = result
 
-        val resultFormatStr = call.argument<String>("resultFormat") ?: "base64"
-        val resultFormat = when (resultFormatStr) {
+        val resultFormat = when (call.argument<String>("resultFormat") ?: "base64") {
             "byteArray" -> ResultFormat.BYTE_ARRAY
             "filePath" -> ResultFormat.FILE_PATH
             "all" -> ResultFormat.ALL
@@ -206,9 +218,11 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             },
             allowCameraSwitch = call.argument<Boolean>("allowCameraSwitch") ?: true,
             showFaceMesh = call.argument<Boolean>("showFaceMesh") ?: true,
-            outputWidth = call.argument<Int>("outputWidth") ?: 480,
-            outputHeight = call.argument<Int>("outputHeight") ?: 640,
-            jpegQuality = call.argument<Int>("jpegQuality") ?: 92,
+            outputWidth = call.argument<Int>("outputWidth") ?: 600,
+            outputHeight = call.argument<Int>("outputHeight") ?: 800,
+            jpegQuality = call.argument<Int>("jpegQuality") ?: 94,
+            burstFrameCount = call.argument<Int>("burstFrameCount") ?: 4,
+            burstFrameDelayMs = (call.argument<Int>("burstFrameDelayMs") ?: 90).toLong(),
             resultFormat = resultFormat,
         )
 
@@ -217,6 +231,7 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 val map = hashMapOf<String, Any?>(
                     "base64" to captureResult.base64,
                     "filePath" to captureResult.filePath,
+                    "burstFrames" to captureResult.burstFrames,
                 )
                 if (captureResult.imageBytes != null) {
                     map["imageBytes"] = captureResult.imageBytes!!.toList()
@@ -244,10 +259,54 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
     }
 
+    private fun handleLaunchHostedVerification(call: MethodCall, result: Result) {
+        val currentActivity = activity
+        if (currentActivity !is ComponentActivity) {
+            result.error("INCOMPATIBLE_ACTIVITY", "Activity must be a ComponentActivity", null)
+            return
+        }
+
+        if (pendingResult != null) {
+            result.error("ALREADY_ACTIVE", "A verification is already in progress", null)
+            return
+        }
+
+        pendingResult = result
+
+        val config = HostedVerificationConfig(
+            sessionUrl = call.argument<String>("sessionUrl"),
+            sessionToken = call.argument<String>("sessionToken"),
+            mode = call.argument<String>("mode") ?: "standard",
+            documentType = call.argument<String>("documentType"),
+            theme = call.argument<String>("theme"),
+            referenceId = call.argument<String>("referenceId"),
+            completionGraceMillis = (call.argument<Int>("completionGraceMillis") ?: 4000).toLong(),
+        )
+
+        val callback = object : HostedVerificationCallback {
+            override fun onResult(hostedResult: HostedVerificationResult) {
+                val map = hashMapOf<String, Any?>(
+                    "isSuccess" to hostedResult.isSuccess,
+                    "status" to hostedResult.status,
+                    "scanRecordId" to hostedResult.scanRecordId,
+                    "sessionToken" to hostedResult.sessionToken,
+                    "errorMessage" to hostedResult.errorMessage,
+                )
+                pendingResult?.success(map)
+                pendingResult = null
+            }
+        }
+
+        try {
+            TrueIDHostedVerification.launch(currentActivity, config, callback)
+        } catch (e: IllegalStateException) {
+            pendingResult?.error("SDK_NOT_INITIALIZED", e.message, null)
+            pendingResult = null
+        }
+    }
+
     @Suppress("DEPRECATION")
     private fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        // The VerificationActivity uses callbacks, not activity results for the Flutter bridge,
-        // so we don't need to handle requestCode here. The callback handles everything.
         return false
     }
 }

@@ -4,6 +4,7 @@ A Flutter plugin for identity verification via Ghana Card (NIA). Captures a self
 
 ## Features
 
+- **Hosted document verification** — document capture + selfie with liveness via TrueID's hosted flow in a Chrome Custom Tab, one Dart call, same UI/UX as the TrueID web widget
 - End-to-end verification — PIN entry, selfie capture, and NIA verification in one call
 - Standalone selfie capture — Use just the camera + face detection
 - ML Kit face detection with real-time alignment guidance
@@ -31,28 +32,21 @@ flutter pub get
 
 ### Android Setup
 
-Add JitPack to your **android/build.gradle** (or `settings.gradle.kts`):
-
-```groovy
-allprojects {
-    repositories {
-        // ...
-        maven { url 'https://jitpack.io' }
-    }
-}
-```
-
-Or in `settings.gradle.kts`:
+Add the TrueID Maven repository to your `android/settings.gradle.kts`:
 
 ```kotlin
 dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") }
+        maven { url = uri("https://app.trueid.info/sdk/android") }
     }
 }
 ```
+
+On-prem institutions: replace `app.trueid.info` with your TrueID server origin.
+
+JitPack (`maven { url = uri("https://jitpack.io") }`, `com.github.elimichaells:trueid-selfie-sdk`) is still supported as a legacy fallback if you can't reach the self-hosted repo.
 
 Ensure your `minSdkVersion` is at least **24** in `android/app/build.gradle`:
 
@@ -78,7 +72,44 @@ void main() async {
 }
 ```
 
-### 2. Verify Identity
+### 2. Hosted Document Verification (recommended)
+
+Full document verification — document capture, selfie with liveness, review — using TrueID's hosted flow in a Chrome Custom Tab. No camera UI to build; same UI/UX as the TrueID web widget.
+
+```dart
+Future<void> verifyDocument() async {
+  final result = await TrueIdSdk.launchHostedVerification(
+    config: HostedVerificationConfig(
+      mode: 'standard',           // or 'pin_selfie', 'identity_lookup'
+      documentType: 'auto',        // optional preselect
+      referenceId: 'your-ref-123', // optional correlation id
+    ),
+  );
+
+  switch (result.status) {
+    case 'CANCELLED':
+      print('User cancelled');
+      break;
+    default:
+      if (result.isSuccess) {
+        // Send result.scanRecordId to your backend, then fetch the full
+        // record with your secret key: GET /api/v1/scan-records/{id}
+      } else {
+        print('Failed: ${result.status} ${result.errorMessage}');
+      }
+  }
+}
+```
+
+For production-grade key hygiene, create the session from your backend (`POST /api/widget-sessions` with your API key) and hand the app only the session url + token:
+
+```dart
+TrueIdSdk.launchHostedVerification(
+  config: HostedVerificationConfig(sessionUrl: url, sessionToken: token),
+);
+```
+
+### 3. Native NIA Verification
 
 ```dart
 Future<void> verifyIdentity() async {
@@ -109,7 +140,7 @@ Future<void> verifyIdentity() async {
 }
 ```
 
-### 3. Standalone Selfie Capture
+### 4. Standalone Selfie Capture
 
 No API key required for just the camera:
 
@@ -134,9 +165,32 @@ Future<void> takeSelfie() async {
 
 | Method | Description |
 |--------|-------------|
-| `initialize({apiKey, environment, customBaseUrl})` | Initialize with your API key. Call once before `verify()`. |
-| `verify({config})` | Launch full verification flow. Returns `VerificationResult?`. |
+| `initialize({apiKey, environment, customBaseUrl})` | Initialize with your API key. Call once before `verify()` or `launchHostedVerification()`. |
+| `launchHostedVerification({config})` | Launch the hosted document verification flow. Returns `HostedVerificationResult` (check `.status` for `"CANCELLED"`). |
+| `verify({config})` | Launch full native verification flow. Returns `VerificationResult?`. |
 | `captureSelfie({config})` | Launch standalone selfie capture. Returns `SelfieCaptureResult?`. |
+
+### HostedVerificationConfig
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `sessionUrl` | `String?` | `null` | Hosted verification URL from a backend-created session |
+| `sessionToken` | `String?` | `null` | Session token matching `sessionUrl`; used to watch for completion |
+| `mode` | `String` | `'standard'` | Flow when the SDK creates the session: `'standard'`, `'pin_selfie'` or `'identity_lookup'` |
+| `documentType` | `String?` | `null` | Preselected document type (e.g. `'ghana_card'`, `'auto'`) |
+| `theme` | `String?` | `null` | `'light'`, `'dark'` or `'auto'` |
+| `referenceId` | `String?` | `null` | Your own correlation id, echoed back on the scan record |
+| `completionGraceMillis` | `int` | `4000` | How long to keep watching for a result after the browser tab closes |
+
+### HostedVerificationResult
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `isSuccess` | `bool` | Whether the flow completed successfully |
+| `status` | `String` | `COMPLETED`, `EXPIRED`, `CANCELLED` or `FAILED` |
+| `scanRecordId` | `String?` | Record ID to retrieve full results server-side |
+| `sessionToken` | `String?` | The widget session token |
+| `errorMessage` | `String?` | Error description (if failed) |
 
 ### VerificationConfig
 

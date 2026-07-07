@@ -33,6 +33,28 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String _status = 'Ready';
   VerificationResult? _result;
+  HostedVerificationResult? _hostedResult;
+
+  Future<void> _verifyDocument() async {
+    setState(() => _status = 'Opening hosted verification...');
+
+    try {
+      final result = await TrueIdSdk.launchHostedVerification(
+        config: const HostedVerificationConfig(mode: 'standard'),
+      );
+
+      setState(() {
+        _hostedResult = result;
+        _status = switch (result.status) {
+          'CANCELLED' => 'Cancelled',
+          _ when result.isSuccess => 'Verified: ${result.scanRecordId}',
+          _ => 'Failed: ${result.status} ${result.errorMessage ?? ''}',
+        };
+      });
+    } on TrueIdException catch (e) {
+      setState(() => _status = 'Error: ${e.message}');
+    }
+  }
 
   Future<void> _verify() async {
     setState(() => _status = 'Verifying...');
@@ -92,14 +114,25 @@ class _HomePageState extends State<HomePage> {
             Text(_status, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 24),
             FilledButton(
+              onPressed: _verifyDocument,
+              child: const Text('Hosted Document Verification'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
               onPressed: _verify,
-              child: const Text('Verify Identity'),
+              child: const Text('Native NIA Verification'),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: _captureSelfie,
               child: const Text('Capture Selfie Only'),
             ),
+            if (_hostedResult != null) ...[
+              const SizedBox(height: 24),
+              const Divider(),
+              Text('Status: ${_hostedResult!.status}'),
+              Text('Scan Record: ${_hostedResult!.scanRecordId ?? 'N/A'}'),
+            ],
             if (_result != null) ...[
               const SizedBox(height: 24),
               const Divider(),

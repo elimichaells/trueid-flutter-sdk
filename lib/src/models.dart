@@ -313,3 +313,99 @@ class TrueIdException implements Exception {
   @override
   String toString() => 'TrueIdException($code): $message';
 }
+
+/// BAC key inputs for an NFC chip read, plus the on-screen copy for the
+/// tap-to-scan step. [documentNumber], [dateOfBirth] and [dateOfExpiry]
+/// normally come from a prior MRZ camera scan.
+///
+/// NFC chip reads only run natively — there is no browser/widget equivalent,
+/// since Web NFC cannot perform ISO 7816 APDU exchanges.
+class NfcReadConfig {
+  final String documentNumber;
+
+  /// yyMMdd, matching the MRZ date format.
+  final String dateOfBirth;
+
+  /// yyMMdd, matching the MRZ date format.
+  final String dateOfExpiry;
+
+  final String title;
+  final String instructions;
+  final int timeoutMs;
+
+  const NfcReadConfig({
+    required this.documentNumber,
+    required this.dateOfBirth,
+    required this.dateOfExpiry,
+    this.title = 'Scan your document chip',
+    this.instructions =
+        'Hold your document against the back of your phone and keep it still.',
+    this.timeoutMs = 20000,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'documentNumber': documentNumber,
+        'dateOfBirth': dateOfBirth,
+        'dateOfExpiry': dateOfExpiry,
+        'title': title,
+        'instructions': instructions,
+        'timeoutMs': timeoutMs,
+      };
+}
+
+/// Parsed contents of an ICAO 9303 chip read (DG1 MRZ + DG2 face + DG7
+/// signature + DG11 additional details).
+class NfcReadResult {
+  final String firstName;
+  final String lastName;
+  final String gender;
+  final String issuingState;
+  final String nationality;
+  final String documentNumber;
+  final String documentCode;
+  final String dateOfBirth;
+  final String dateOfExpiry;
+  final String personalNumber;
+
+  /// Face image (DG2), PNG bytes base64-encoded.
+  final String? photoBase64;
+
+  /// Signature image (DG7), PNG bytes base64-encoded, when present on the chip.
+  final String? signatureBase64;
+
+  const NfcReadResult({
+    required this.firstName,
+    required this.lastName,
+    required this.gender,
+    required this.issuingState,
+    required this.nationality,
+    required this.documentNumber,
+    required this.documentCode,
+    required this.dateOfBirth,
+    required this.dateOfExpiry,
+    required this.personalNumber,
+    this.photoBase64,
+    this.signatureBase64,
+  });
+
+  factory NfcReadResult.fromMap(Map<dynamic, dynamic> map) {
+    return NfcReadResult(
+      firstName: map['firstName'] as String? ?? '',
+      lastName: map['lastName'] as String? ?? '',
+      gender: map['gender'] as String? ?? '',
+      issuingState: map['issuingState'] as String? ?? '',
+      nationality: map['nationality'] as String? ?? '',
+      documentNumber: map['documentNumber'] as String? ?? '',
+      documentCode: map['documentCode'] as String? ?? '',
+      dateOfBirth: map['dateOfBirth'] as String? ?? '',
+      dateOfExpiry: map['dateOfExpiry'] as String? ?? '',
+      personalNumber: map['personalNumber'] as String? ?? '',
+      photoBase64: map['photoBase64'] as String?,
+      signatureBase64: map['signatureBase64'] as String?,
+    );
+  }
+
+  @override
+  String toString() =>
+      'NfcReadResult(documentNumber: $documentNumber, nationality: $nationality)';
+}

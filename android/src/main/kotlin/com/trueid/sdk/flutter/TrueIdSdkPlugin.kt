@@ -1,6 +1,7 @@
 package com.trueid.sdk.flutter
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import androidx.activity.ComponentActivity
 import com.trueid.sdk.selfie.CameraFacing
@@ -8,12 +9,17 @@ import com.trueid.sdk.selfie.CaptureMode
 import com.trueid.sdk.selfie.HostedVerificationCallback
 import com.trueid.sdk.selfie.HostedVerificationConfig
 import com.trueid.sdk.selfie.HostedVerificationResult
+import com.trueid.sdk.selfie.NfcReadCallback
+import com.trueid.sdk.selfie.NfcReadConfig
+import com.trueid.sdk.selfie.NfcReadError
+import com.trueid.sdk.selfie.NfcReadResult
 import com.trueid.sdk.selfie.ResultFormat
 import com.trueid.sdk.selfie.SelfieCaptureCallback
 import com.trueid.sdk.selfie.SelfieCaptureConfig
 import com.trueid.sdk.selfie.SelfieCaptureError
 import com.trueid.sdk.selfie.SelfieCaptureResult
 import com.trueid.sdk.selfie.TrueIDHostedVerification
+import com.trueid.sdk.selfie.TrueIDNfcVerification
 import com.trueid.sdk.selfie.TrueIDSdk
 import com.trueid.sdk.selfie.TrueIDSelfieCapture
 import com.trueid.sdk.selfie.TrueIDVerification
@@ -31,12 +37,14 @@ import io.flutter.plugin.common.MethodChannel.Result
 
 class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var channel: MethodChannel
+    private lateinit var appContext: Context
     private var activity: Activity? = null
     private var pendingResult: Result? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(binding.binaryMessenger, "com.trueid.sdk/flutter")
         channel.setMethodCallHandler(this)
+        appContext = binding.applicationContext
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -71,6 +79,9 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "verify" -> handleVerify(call, result)
             "captureSelfie" -> handleCaptureSelfie(call, result)
             "launchHostedVerification" -> handleLaunchHostedVerification(call, result)
+            "isNfcSupported" -> result.success(TrueIDNfcVerification.isNfcSupported(appContext))
+            "isNfcEnabled" -> result.success(TrueIDNfcVerification.isNfcEnabled(appContext))
+            "readNfcChip" -> handleReadNfcChip(call, result)
             else -> result.notImplemented()
         }
     }
@@ -303,6 +314,78 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             pendingResult?.error("SDK_NOT_INITIALIZED", e.message, null)
             pendingResult = null
         }
+    }
+
+    private fun handleReadNfcChip(call: MethodCall, result: Result) {
+        val currentActivity = activity
+        if (currentActivity !is ComponentActivity) {
+            result.error("INCOMPATIBLE_ACTIVITY", "Activity must be a ComponentActivity", null)
+            return
+        }
+
+        if (pendingResult != null) {
+            result.error("ALREADY_ACTIVE", "An NFC read is already in progress", null)
+            return
+        }
+
+        val documentNumber = call.argument<String>("documentNumber")
+        val dateOfBirth = call.argument<String>("dateOfBirth")
+        val dateOfExpiry = call.argument<String>("dateOfExpiry")
+        if (documentNumber.isNullOrBlank() || dateOfBirth.isNullOrBlank() || dateOfExpiry.isNullOrBlank()) {
+            result.error("INVALID_ARGUMENT", "documentNumber, dateOfBirth and dateOfExpiry are required", null)
+            return
+        }
+
+        pendingResult = result
+
+        val config = NfcReadConfig(
+            documentNumber = documentNumber,
+            dateOfBirth = dateOfBirth,
+            dateOfExpiry = dateOfExpiry,
+            title = call.argument<String>("title") ?: "Scan your document chip",
+            instructions = call.argument<String>("instructions")
+                ?: "Hold your document against the back of your phone and keep it still.",
+            timeoutMs = (call.argument<Int>("timeoutMs") ?: 20000).toLong(),
+        )
+
+        val callback = object : NfcReadCallback {
+            override fun onRead(nfcResult: NfcReadResult) {
+                val map = hashMapOf<String, Any?>(
+                    "firstName" to nfcResult.firstName,
+                    "lastName" to nfcResult.lastName,
+                    "gender" to nfcResult.gender,
+                    "issuingState" to nfcResult.issuingState,
+                    "nationality" to nfcResult.nationality,
+                    "documentNumber" to nfcResult.documentNumber,
+                    "documentCode" to nfcResult.documentCode,
+                    "dateOfBirth" to nfcResult.dateOfBirth,
+                    "dateOfExpiry" to nfcResult.dateOfExpiry,
+                    "personalNumber" to nfcResult.personalNumber,
+                    "photoBase64" to nfcResult.photoBase64,
+                    "signatureBase64" to nfcResult.signatureBase64,
+                )
+                pendingResult?.success(map)
+                pendingResult = null
+            }
+
+            override fun onCancelled() {
+                pendingResult?.success(null)
+                pendingResult = null
+            }
+
+            override fun onError(error: NfcReadError) {
+                val code = when (error) {
+                    is NfcReadError.NfcNotSupported -> "NFC_NOT_SUPPORTED"
+                    is NfcReadError.NfcDisabled -> "NFC_DISABLED"
+                    is NfcReadError.Timeout -> "NFC_TIMEOUT"
+                    is NfcReadError.ReadFailed -> "NFC_READ_FAILED"
+                }
+                pendingResult?.error(code, error.message, null)
+                pendingResult = null
+            }
+        }
+
+        TrueIDNfcVerification.launch(currentActivity, config, callback)
     }
 
     @Suppress("DEPRECATION")

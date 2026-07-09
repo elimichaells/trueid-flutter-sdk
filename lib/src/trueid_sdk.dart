@@ -128,4 +128,55 @@ class TrueIdSdk {
       );
     }
   }
+
+  /// Whether this device has NFC hardware at all.
+  static Future<bool> isNfcSupported() async {
+    final result = await _channel.invokeMethod('isNfcSupported');
+    return result as bool? ?? false;
+  }
+
+  /// Whether NFC hardware is present AND currently switched on.
+  static Future<bool> isNfcEnabled() async {
+    final result = await _channel.invokeMethod('isNfcEnabled');
+    return result as bool? ?? false;
+  }
+
+  /// Read an ICAO 9303 chip (Ghana Card / ePassport) over NFC.
+  ///
+  /// [config]'s BAC key fields normally come from a prior MRZ camera scan
+  /// (e.g. via [captureSelfie]'s document flow or your own MRZ reader).
+  ///
+  /// NFC chip reads only run natively; there is no browser/widget equivalent
+  /// — Web NFC cannot perform the ISO 7816 APDU exchanges an ICAO 9303 chip
+  /// requires.
+  ///
+  /// Returns `null` if the user cancelled. Throws [TrueIdException] with
+  /// code `NFC_NOT_SUPPORTED`, `NFC_DISABLED`, `NFC_TIMEOUT` or
+  /// `NFC_READ_FAILED` on failure.
+  ///
+  /// ```dart
+  /// if (await TrueIdSdk.isNfcEnabled()) {
+  ///   final chip = await TrueIdSdk.readNfcChip(
+  ///     config: NfcReadConfig(
+  ///       documentNumber: mrz.documentNumber,
+  ///       dateOfBirth: mrz.dateOfBirth,
+  ///       dateOfExpiry: mrz.dateOfExpiry,
+  ///     ),
+  ///   );
+  /// }
+  /// ```
+  static Future<NfcReadResult?> readNfcChip({
+    required NfcReadConfig config,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod('readNfcChip', config.toMap());
+      if (result == null) return null;
+      return NfcReadResult.fromMap(Map<dynamic, dynamic>.from(result));
+    } on PlatformException catch (e) {
+      throw TrueIdException(
+        code: e.code,
+        message: e.message ?? 'NFC read failed',
+      );
+    }
+  }
 }

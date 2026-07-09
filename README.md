@@ -6,6 +6,7 @@ A Flutter plugin for identity verification via Ghana Card (NIA). Captures a self
 
 - **Hosted document verification** — document capture + selfie with liveness via TrueID's hosted flow in a Chrome Custom Tab, one Dart call, same UI/UX as the TrueID web widget
 - End-to-end verification — PIN entry, selfie capture, and NIA verification in one call
+- **NFC chip reading** — reads the ICAO 9303 chip on Ghana Card / ePassport-style documents (BAC/PACE, DG1/DG2/DG7/DG11) for stronger-than-OCR accuracy
 - Standalone selfie capture — Use just the camera + face detection
 - ML Kit face detection with real-time alignment guidance
 - Simple async Dart API
@@ -159,6 +160,39 @@ Future<void> takeSelfie() async {
 }
 ```
 
+### 5. NFC Chip Read
+
+Reads the ICAO 9303 chip on Ghana Card / ePassport-style documents. The three BAC key fields normally come from a prior MRZ camera scan. There is no browser/widget equivalent — Web NFC cannot perform the ISO 7816 APDU exchanges an ICAO 9303 chip requires, so this is native-only.
+
+```dart
+Future<void> readChip(String documentNumber, String dob, String doe) async {
+  if (!await TrueIdSdk.isNfcEnabled()) {
+    print('Turn on NFC to continue');
+    return;
+  }
+
+  try {
+    final chip = await TrueIdSdk.readNfcChip(
+      config: NfcReadConfig(
+        documentNumber: documentNumber,
+        dateOfBirth: dob,   // yyMMdd
+        dateOfExpiry: doe,  // yyMMdd
+      ),
+    );
+
+    if (chip == null) {
+      print('User cancelled');
+      return;
+    }
+
+    print('Chip read: ${chip.firstName} ${chip.lastName}');
+  } on TrueIdException catch (e) {
+    // e.code: NFC_NOT_SUPPORTED, NFC_DISABLED, NFC_TIMEOUT, NFC_READ_FAILED
+    print('NFC error: ${e.code} - ${e.message}');
+  }
+}
+```
+
 ## API Reference
 
 ### TrueIdSdk
@@ -169,6 +203,9 @@ Future<void> takeSelfie() async {
 | `launchHostedVerification({config})` | Launch the hosted document verification flow. Returns `HostedVerificationResult` (check `.status` for `"CANCELLED"`). |
 | `verify({config})` | Launch full native verification flow. Returns `VerificationResult?`. |
 | `captureSelfie({config})` | Launch standalone selfie capture. Returns `SelfieCaptureResult?`. |
+| `isNfcSupported()` | Whether this device has NFC hardware at all. |
+| `isNfcEnabled()` | Whether NFC hardware is present and switched on. |
+| `readNfcChip({config})` | Read an ICAO 9303 chip over NFC. Returns `NfcReadResult?` (`null` if cancelled). |
 
 ### HostedVerificationConfig
 
@@ -220,6 +257,30 @@ Future<void> takeSelfie() async {
 | `errorMessage` | `String?` | Error description (if failed) |
 | `errorCode` | `String?` | Error code (if failed) |
 
+### NfcReadConfig
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `documentNumber` | `String` | required | BAC key field, from a prior MRZ scan |
+| `dateOfBirth` | `String` | required | BAC key field, `yyMMdd` |
+| `dateOfExpiry` | `String` | required | BAC key field, `yyMMdd` |
+| `title` | `String` | `'Scan your document chip'` | Screen title |
+| `instructions` | `String` | default copy | Screen body text |
+| `timeoutMs` | `int` | `20000` | How long to wait for a chip before reporting `NFC_TIMEOUT` |
+
+### NfcReadResult
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `firstName` / `lastName` | `String` | From the chip's MRZ (DG1) |
+| `gender` | `String` | From DG1 |
+| `issuingState` / `nationality` | `String` | From DG1 |
+| `documentNumber` / `documentCode` | `String` | From DG1 |
+| `dateOfBirth` / `dateOfExpiry` | `String` | From DG1 |
+| `personalNumber` | `String` | From DG1, falling back to DG11 |
+| `photoBase64` | `String?` | Face image (DG2), PNG bytes base64-encoded |
+| `signatureBase64` | `String?` | Signature image (DG7), when present on the chip |
+
 ### Environments
 
 ```dart
@@ -246,6 +307,7 @@ The SDK handles these automatically:
 
 - **CAMERA** — For selfie capture
 - **INTERNET** — For API calls
+- **NFC** — For chip reads (`readNfcChip()`); no-op on devices without NFC hardware
 
 You must handle the runtime camera permission in your app before calling `verify()` or `captureSelfie()`.
 

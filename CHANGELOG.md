@@ -1,3 +1,14 @@
+## 1.2.0
+
+* Added NFC chip reading: `TrueIdSdk.isNfcSupported()`, `isNfcEnabled()`, and
+  `readNfcChip()` — reads the ICAO 9303 chip on Ghana Card / ePassport-style
+  documents (BAC/PACE handshake, DG1/DG2/DG7/DG11) given the MRZ key fields
+  from a prior camera scan. Android only for now; ported from the NFC engine
+  proven out in TrueID's standalone field app so third-party integrators get
+  the same capability. There is no browser/widget equivalent — Web NFC cannot
+  perform the ISO 7816 APDU exchanges an ICAO 9303 chip requires.
+* Native dependency: `trueid-selfie-sdk` bumped to 2.4.0.
+
 ## 1.1.0
 
 * Added `TrueIdSdk.launchHostedVerification()` — document capture + selfie with

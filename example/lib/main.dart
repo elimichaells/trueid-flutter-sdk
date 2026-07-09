@@ -34,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   String _status = 'Ready';
   VerificationResult? _result;
   HostedVerificationResult? _hostedResult;
+  NfcReadResult? _nfcResult;
 
   Future<void> _verifyDocument() async {
     setState(() => _status = 'Opening hosted verification...');
@@ -102,6 +103,40 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _readNfc() async {
+    setState(() => _status = 'Checking NFC…');
+
+    final supported = await TrueIdSdk.isNfcSupported();
+    if (!supported) {
+      setState(() => _status = 'This device has no NFC hardware');
+      return;
+    }
+    if (!await TrueIdSdk.isNfcEnabled()) {
+      setState(() => _status = 'NFC is turned off');
+      return;
+    }
+
+    setState(() => _status = 'Reading chip…');
+
+    try {
+      // These three fields normally come from a prior MRZ camera scan.
+      final result = await TrueIdSdk.readNfcChip(
+        config: const NfcReadConfig(
+          documentNumber: 'GHA-000000000',
+          dateOfBirth: '900101',
+          dateOfExpiry: '300101',
+        ),
+      );
+
+      setState(() {
+        _nfcResult = result;
+        _status = result != null ? 'Chip read: ${result.firstName} ${result.lastName}' : 'Cancelled';
+      });
+    } on TrueIdException catch (e) {
+      setState(() => _status = 'NFC error: ${e.code} - ${e.message}');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,11 +162,23 @@ class _HomePageState extends State<HomePage> {
               onPressed: _captureSelfie,
               child: const Text('Capture Selfie Only'),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: _readNfc,
+              child: const Text('Read NFC Chip'),
+            ),
             if (_hostedResult != null) ...[
               const SizedBox(height: 24),
               const Divider(),
               Text('Status: ${_hostedResult!.status}'),
               Text('Scan Record: ${_hostedResult!.scanRecordId ?? 'N/A'}'),
+            ],
+            if (_nfcResult != null) ...[
+              const SizedBox(height: 24),
+              const Divider(),
+              Text('Name: ${_nfcResult!.firstName} ${_nfcResult!.lastName}'),
+              Text('Document: ${_nfcResult!.documentNumber}'),
+              Text('Nationality: ${_nfcResult!.nationality}'),
             ],
             if (_result != null) ...[
               const SizedBox(height: 24),

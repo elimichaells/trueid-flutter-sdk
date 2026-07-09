@@ -59,6 +59,14 @@ android {
 }
 ```
 
+**Required:** your `MainActivity` must extend `FlutterFragmentActivity`, not the `FlutterActivity` that `flutter create` generates — the SDK's camera and NFC screens need an androidx `ComponentActivity` host, and calls fail with `INCOMPATIBLE_ACTIVITY` otherwise:
+
+```kotlin
+import io.flutter.embedding.android.FlutterFragmentActivity
+
+class MainActivity : FlutterFragmentActivity()
+```
+
 ## Quick Start
 
 ### 1. Initialize

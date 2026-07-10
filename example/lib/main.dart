@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trueid_sdk/trueid_sdk.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await TrueIdSdk.initialize(apiKey: 'your-api-key');
   runApp(const MyApp());
 }
 
@@ -31,12 +31,117 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const _prefApiKey = 'trueid_example_api_key';
+
   String _status = 'Ready';
+  String _apiKey = '';
   VerificationResult? _result;
   HostedVerificationResult? _hostedResult;
   NfcReadResult? _nfcResult;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadApiKeyAndInit();
+  }
+
+  Future<void> _loadApiKeyAndInit() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_prefApiKey)?.trim() ?? '';
+    if (saved.isEmpty) {
+      setState(() => _status = 'Set your API key via ⚙ (top right) to begin');
+      return;
+    }
+    await _initializeSdk(saved);
+  }
+
+  Future<void> _initializeSdk(String key) async {
+    try {
+      await TrueIdSdk.initialize(apiKey: key);
+      setState(() {
+        _apiKey = key;
+        _status = 'Ready (key …${key.length > 6 ? key.substring(key.length - 6) : key})';
+      });
+    } catch (e) {
+      setState(() => _status = 'SDK init failed: $e');
+    }
+  }
+
+  bool _requireApiKey() {
+    if (_apiKey.isNotEmpty) return true;
+    setState(() => _status = 'No API key set — tap ⚙ in the top right first');
+    return false;
+  }
+
+  Future<void> _openApiKeySettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final controller = TextEditingController(
+      text: prefs.getString(_prefApiKey) ?? '',
+    );
+    if (!mounted) return;
+
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('API Key'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'From app.trueid.info → Settings → API. Stored on this device only.\n\n'
+              '• Native NIA Verification needs your SECRET key '
+              '(publishable keys are rejected by /selfie-verify).\n'
+              '• Hosted Document Verification needs your PUBLISHABLE key.\n\n'
+              'These are two different values — swap the key here to test '
+              'each button correctly.',
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+              decoration: const InputDecoration(
+                hintText: 'secret or publishable key',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (saved == null) return;
+    await prefs.setString(_prefApiKey, saved);
+    if (saved.isEmpty) {
+      setState(() {
+        _apiKey = '';
+        _status = 'API key cleared — set one via ⚙ to begin';
+      });
+      return;
+    }
+    await _initializeSdk(saved);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('API key saved')),
+      );
+    }
+  }
+
   Future<void> _verifyDocument() async {
+    if (!_requireApiKey()) return;
     setState(() => _status = 'Opening hosted verification...');
 
     try {
@@ -58,6 +163,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _verify() async {
+    if (!_requireApiKey()) return;
     setState(() => _status = 'Verifying...');
 
     try {
@@ -148,7 +254,16 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('TrueID SDK Example')),
+      appBar: AppBar(
+        title: const Text('TrueID SDK Example'),
+        actions: [
+          IconButton(
+            onPressed: _openApiKeySettings,
+            tooltip: 'API key',
+            icon: const Icon(Icons.settings),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

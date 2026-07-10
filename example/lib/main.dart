@@ -31,10 +31,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const _prefApiKey = 'trueid_example_api_key';
+  static const _prefSecretKey = 'trueid_example_secret_key';
+  static const _prefPublishableKey = 'trueid_example_publishable_key';
 
   String _status = 'Ready';
-  String _apiKey = '';
+  String _secretKey = '';
+  String _publishableKey = '';
   VerificationResult? _result;
   HostedVerificationResult? _hostedResult;
   NfcReadResult? _nfcResult;
@@ -42,68 +44,99 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadApiKeyAndInit();
+    _loadApiKeysAndInit();
   }
 
-  Future<void> _loadApiKeyAndInit() async {
+  String _shorten(String key) =>
+      key.length > 6 ? '…${key.substring(key.length - 6)}' : key;
+
+  Future<void> _loadApiKeysAndInit() async {
     final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_prefApiKey)?.trim() ?? '';
-    if (saved.isEmpty) {
-      setState(() => _status = 'Set your API key via ⚙ (top right) to begin');
+    final secret = prefs.getString(_prefSecretKey)?.trim() ?? '';
+    final publishable = prefs.getString(_prefPublishableKey)?.trim() ?? '';
+    if (secret.isEmpty && publishable.isEmpty) {
+      setState(() => _status = 'Set your API keys via ⚙ (top right) to begin');
       return;
     }
-    await _initializeSdk(saved);
+    await _initializeSdk(secret, publishable);
   }
 
-  Future<void> _initializeSdk(String key) async {
+  Future<void> _initializeSdk(String secretKey, String publishableKey) async {
     try {
-      await TrueIdSdk.initialize(apiKey: key);
+      await TrueIdSdk.initialize(
+        secretKey: secretKey.isEmpty ? null : secretKey,
+        publishableKey: publishableKey.isEmpty ? null : publishableKey,
+      );
       setState(() {
-        _apiKey = key;
-        _status = 'Ready (key …${key.length > 6 ? key.substring(key.length - 6) : key})';
+        _secretKey = secretKey;
+        _publishableKey = publishableKey;
+        final parts = [
+          if (secretKey.isNotEmpty) 'sk ${_shorten(secretKey)}',
+          if (publishableKey.isNotEmpty) 'pk ${_shorten(publishableKey)}',
+        ];
+        _status = 'Ready (${parts.join(', ')})';
       });
     } catch (e) {
       setState(() => _status = 'SDK init failed: $e');
     }
   }
 
-  bool _requireApiKey() {
-    if (_apiKey.isNotEmpty) return true;
-    setState(() => _status = 'No API key set — tap ⚙ in the top right first');
+  bool _requireSecretKey() {
+    if (_secretKey.isNotEmpty) return true;
+    setState(() => _status = 'Native NIA Verification needs your SECRET key — tap ⚙ first');
+    return false;
+  }
+
+  bool _requirePublishableKey() {
+    if (_publishableKey.isNotEmpty) return true;
+    setState(() => _status = 'Hosted Verification needs your PUBLISHABLE key — tap ⚙ first');
     return false;
   }
 
   Future<void> _openApiKeySettings() async {
     final prefs = await SharedPreferences.getInstance();
-    final controller = TextEditingController(
-      text: prefs.getString(_prefApiKey) ?? '',
+    final secretController = TextEditingController(
+      text: prefs.getString(_prefSecretKey) ?? '',
+    );
+    final publishableController = TextEditingController(
+      text: prefs.getString(_prefPublishableKey) ?? '',
     );
     if (!mounted) return;
 
-    final saved = await showDialog<String>(
+    final saved = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('API Key'),
+        title: const Text('API Keys'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'From app.trueid.info → Settings → API. Stored on this device only.\n\n'
-              '• Native NIA Verification needs your SECRET key '
-              '(publishable keys are rejected by /selfie-verify).\n'
-              '• Hosted Document Verification needs your PUBLISHABLE key.\n\n'
-              'These are two different values — swap the key here to test '
-              'each button correctly.',
+              '• SECRET key (sk_…) — Native NIA Verification & Capture Selfie.\n'
+              '• PUBLISHABLE key (pk_…) — Hosted Document Verification.\n\n'
+              'Set both once; each button automatically uses the right one.',
               style: TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: controller,
+              controller: secretController,
               autofocus: true,
               style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
               decoration: const InputDecoration(
-                hintText: 'secret or publishable key',
+                labelText: 'Secret key',
+                hintText: 'sk_...',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: publishableController,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+              decoration: const InputDecoration(
+                labelText: 'Publishable key',
+                hintText: 'pk_...',
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
@@ -116,32 +149,36 @@ class _HomePageState extends State<HomePage> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Save'),
           ),
         ],
       ),
     );
 
-    if (saved == null) return;
-    await prefs.setString(_prefApiKey, saved);
-    if (saved.isEmpty) {
+    if (saved != true) return;
+    final secret = secretController.text.trim();
+    final publishable = publishableController.text.trim();
+    await prefs.setString(_prefSecretKey, secret);
+    await prefs.setString(_prefPublishableKey, publishable);
+    if (secret.isEmpty && publishable.isEmpty) {
       setState(() {
-        _apiKey = '';
-        _status = 'API key cleared — set one via ⚙ to begin';
+        _secretKey = '';
+        _publishableKey = '';
+        _status = 'API keys cleared — set them via ⚙ to begin';
       });
       return;
     }
-    await _initializeSdk(saved);
+    await _initializeSdk(secret, publishable);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('API key saved')),
+        const SnackBar(content: Text('API keys saved')),
       );
     }
   }
 
   Future<void> _verifyDocument() async {
-    if (!_requireApiKey()) return;
+    if (!_requirePublishableKey()) return;
     setState(() => _status = 'Opening hosted verification...');
 
     try {
@@ -163,7 +200,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _verify() async {
-    if (!_requireApiKey()) return;
+    if (!_requireSecretKey()) return;
     setState(() => _status = 'Verifying...');
 
     try {

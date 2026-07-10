@@ -3,10 +3,14 @@ import 'models.dart';
 
 /// Main entry point for the TrueID SDK.
 ///
-/// Call [initialize] once before using [verify] or [captureSelfie].
+/// Call [initialize] once before using [verify], [launchHostedVerification],
+/// or [captureSelfie].
 ///
 /// ```dart
-/// TrueIdSdk.initialize(apiKey: 'your-api-key');
+/// TrueIdSdk.initialize(
+///   secretKey: 'sk_your_secret_key',
+///   publishableKey: 'pk_your_publishable_key',
+/// );
 ///
 /// final result = await TrueIdSdk.verify();
 /// ```
@@ -15,20 +19,26 @@ class TrueIdSdk {
 
   TrueIdSdk._();
 
-  /// Initialize the SDK with your API key.
+  /// Initialize the SDK with your API key(s).
   ///
-  /// Must be called before [verify]. Not required for [captureSelfie].
+  /// The two keys are not interchangeable: [verify] and [captureSelfie] (native
+  /// NIA PIN + selfie) require [secretKey], while [launchHostedVerification]
+  /// requires [publishableKey]. Pass whichever your app uses — at least one
+  /// must be provided. Must be called before [verify].
   ///
-  /// [apiKey] — Your TrueID API key from app.trueid.info.
+  /// [secretKey] — Your TrueID secret key (`sk_...`) from app.trueid.info → Settings → API.
+  /// [publishableKey] — Your TrueID publishable key (`pk_...`) from the same page.
   /// [environment] — Target environment (defaults to production).
   /// [customBaseUrl] — Required when environment is [TrueIdEnvironment.custom].
   static Future<void> initialize({
-    required String apiKey,
+    String? secretKey,
+    String? publishableKey,
     TrueIdEnvironment environment = TrueIdEnvironment.production,
     String? customBaseUrl,
   }) async {
     await _channel.invokeMethod('initialize', {
-      'apiKey': apiKey,
+      'secretKey': secretKey,
+      'publishableKey': publishableKey,
       'environment': environment.name,
       'customBaseUrl': customBaseUrl,
     });

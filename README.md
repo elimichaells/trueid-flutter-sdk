@@ -76,10 +76,15 @@ import 'package:trueid_sdk/trueid_sdk.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await TrueIdSdk.initialize(apiKey: 'your-api-key');
+  await TrueIdSdk.initialize(
+    secretKey: 'sk_your_secret_key',           // for verify() / captureSelfie()
+    publishableKey: 'pk_your_publishable_key', // for launchHostedVerification()
+  );
   runApp(MyApp());
 }
 ```
+
+Both keys live on the same page (app.trueid.info → Settings → API) but are not interchangeable — the backend rejects a publishable key on secret-only endpoints and vice versa. Pass whichever your app uses; at least one is required.
 
 ### 2. Hosted Document Verification (recommended)
 
@@ -207,7 +212,7 @@ Future<void> readChip(String documentNumber, String dob, String doe) async {
 
 | Method | Description |
 |--------|-------------|
-| `initialize({apiKey, environment, customBaseUrl})` | Initialize with your API key. Call once before `verify()` or `launchHostedVerification()`. |
+| `initialize({secretKey, publishableKey, environment, customBaseUrl})` | Initialize with your API key(s). `secretKey` is required for `verify()`/`captureSelfie()`; `publishableKey` is required for `launchHostedVerification()`. Call once before use. |
 | `launchHostedVerification({config})` | Launch the hosted document verification flow. Returns `HostedVerificationResult` (check `.status` for `"CANCELLED"`). |
 | `verify({config})` | Launch full native verification flow. Returns `VerificationResult?`. |
 | `captureSelfie({config})` | Launch standalone selfie capture. Returns `SelfieCaptureResult?`. |
@@ -297,17 +302,19 @@ Future<void> readChip(String documentNumber, String dob, String doe) async {
 
 ```dart
 // Production (default)
-TrueIdSdk.initialize(apiKey: 'key');
+TrueIdSdk.initialize(secretKey: 'sk_key', publishableKey: 'pk_key');
 
 // Staging
 TrueIdSdk.initialize(
-  apiKey: 'key',
+  secretKey: 'sk_key',
+  publishableKey: 'pk_key',
   environment: TrueIdEnvironment.staging,
 );
 
 // Custom
 TrueIdSdk.initialize(
-  apiKey: 'key',
+  secretKey: 'sk_key',
+  publishableKey: 'pk_key',
   environment: TrueIdEnvironment.custom,
   customBaseUrl: 'https://your-server.com',
 );

@@ -87,9 +87,10 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun handleInitialize(call: MethodCall, result: Result) {
-        val apiKey = call.argument<String>("apiKey")
-        if (apiKey.isNullOrBlank()) {
-            result.error("INVALID_ARGUMENT", "apiKey is required", null)
+        val secretKey = call.argument<String>("secretKey")
+        val publishableKey = call.argument<String>("publishableKey")
+        if (secretKey.isNullOrBlank() && publishableKey.isNullOrBlank()) {
+            result.error("INVALID_ARGUMENT", "secretKey or publishableKey is required", null)
             return
         }
 
@@ -104,7 +105,8 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
         try {
             TrueIDSdk.initialize(
-                apiKey = apiKey,
+                secretKey = secretKey,
+                publishableKey = publishableKey,
                 environment = environment,
                 customBaseUrl = customBaseUrl,
             )

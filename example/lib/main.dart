@@ -64,6 +64,14 @@ class _HomePageState extends State<HomePage> {
       final result = await TrueIdSdk.verify(
         config: const VerificationConfig(
           enforceFaceComparison: true,
+          transactionTypes: [
+            'Cash Withdrawal',
+            'Loan Application',
+            'Account Opening',
+            'SIM Registration',
+            'Remittance Collection',
+            'Other',
+          ],
         ),
       );
 

@@ -50,6 +50,11 @@ class VerificationConfig {
   /// Show the Photo Instructions screen before opening the camera.
   final bool showGuidelines;
 
+  /// Use the institution's server-managed `selfieCapture` setting. This maps
+  /// `guided`, `manual`, and `auto` to the native flow. Disable only when the
+  /// integration must use the local capture options below.
+  final bool useOrganizationCaptureSettings;
+
   /// Selfie capture settings.
   final SelfieCaptureConfig captureConfig;
 
@@ -61,6 +66,7 @@ class VerificationConfig {
     this.transactionTypes = const [],
     this.requireLiveness = true,
     this.showGuidelines = true,
+    this.useOrganizationCaptureSettings = true,
     this.captureConfig = const SelfieCaptureConfig(),
   });
 
@@ -72,6 +78,7 @@ class VerificationConfig {
         'transactionTypes': transactionTypes,
         'requireLiveness': requireLiveness,
         'showGuidelines': showGuidelines,
+        'useOrganizationCaptureSettings': useOrganizationCaptureSettings,
         'captureMode': captureConfig.captureMode.name,
         'initialCamera': captureConfig.initialCamera.name,
         'allowCameraSwitch': captureConfig.allowCameraSwitch,

@@ -247,6 +247,7 @@ Future<void> readChip(String documentNumber, String dob, String doe) async {
 | `transactionTypes` | `List<String>` | `[]` | Optional dropdown choices on the review screen |
 | `requireLiveness` | `bool` | `true` | Guided liveness challenge (turn head left/right + countdown) |
 | `showGuidelines` | `bool` | `true` | Photo Instructions screen before the camera |
+| `useOrganizationCaptureSettings` | `bool` | `true` | Use the institution's `guided`, `manual`, or `auto` selfie-capture setting; passive anti-spoof remains mandatory |
 | `captureConfig` | `SelfieCaptureConfig` | default | Selfie camera settings |
 
 ### VerificationResult

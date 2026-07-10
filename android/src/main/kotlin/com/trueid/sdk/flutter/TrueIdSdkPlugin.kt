@@ -136,6 +136,8 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             transactionTypes = call.argument<List<String>>("transactionTypes") ?: emptyList(),
             requireLiveness = call.argument<Boolean>("requireLiveness") ?: true,
             showGuidelines = call.argument<Boolean>("showGuidelines") ?: true,
+            useOrganizationCaptureSettings =
+                call.argument<Boolean>("useOrganizationCaptureSettings") ?: true,
             captureConfig = SelfieCaptureConfig(
                 captureMode = when (call.argument<String>("captureMode")) {
                     "manual" -> CaptureMode.MANUAL

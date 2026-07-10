@@ -9,6 +9,9 @@
 * New `VerificationConfig` fields: `requireLiveness` (default true),
   `showGuidelines` (default true), `transactionTypes` (optional dropdown
   choices for the review screen).
+* Native verification now reads the institution's `selfieCapture` setting by
+  default (`guided`, `manual`, or `auto`). Set
+  `useOrganizationCaptureSettings: false` to use local capture settings.
 * Native dependency: `trueid-selfie-sdk` bumped to 2.5.0.
 
 ## 1.2.0

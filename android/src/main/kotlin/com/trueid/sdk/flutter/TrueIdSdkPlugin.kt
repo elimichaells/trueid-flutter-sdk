@@ -133,6 +133,9 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             enforceFaceComparison = call.argument<Boolean>("enforceFaceComparison") ?: true,
             livenessPassed = call.argument<Boolean>("livenessPassed"),
             transactionType = call.argument<String>("transactionType"),
+            transactionTypes = call.argument<List<String>>("transactionTypes") ?: emptyList(),
+            requireLiveness = call.argument<Boolean>("requireLiveness") ?: true,
+            showGuidelines = call.argument<Boolean>("showGuidelines") ?: true,
             captureConfig = SelfieCaptureConfig(
                 captureMode = when (call.argument<String>("captureMode")) {
                     "manual" -> CaptureMode.MANUAL

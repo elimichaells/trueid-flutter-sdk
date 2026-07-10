@@ -1,3 +1,16 @@
+## 1.3.0
+
+* Native NIA verification flow rebuilt to exactly match the TrueID field app:
+  Photo Instructions screen → selfie capture with guided liveness (turn head
+  left/right, return to center, 3-2-1 countdown) → review screen showing the
+  captured face where the user enters their Ghana Card PIN (auto-formatted
+  `GHA-XXXXXXXXX-X`) and submits. Transient network failures keep the captured
+  selfie and allow retrying in place.
+* New `VerificationConfig` fields: `requireLiveness` (default true),
+  `showGuidelines` (default true), `transactionTypes` (optional dropdown
+  choices for the review screen).
+* Native dependency: `trueid-selfie-sdk` bumped to 2.5.0.
+
 ## 1.2.0
 
 * Added NFC chip reading: `TrueIdSdk.isNfcSupported()`, `isNfcEnabled()`, and

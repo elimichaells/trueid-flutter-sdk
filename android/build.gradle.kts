@@ -36,6 +36,6 @@ dependencies {
     if (localSelfieSdk != null) {
         add("implementation", localSelfieSdk)
     } else {
-        add("implementation", "com.trueid.sdk:trueid-selfie-sdk:2.4.0")
+        add("implementation", "com.trueid.sdk:trueid-selfie-sdk:2.5.0")
     }
 }

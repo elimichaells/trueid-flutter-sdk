@@ -39,6 +39,17 @@ class VerificationConfig {
   /// Optional transaction type label for your records.
   final String? transactionType;
 
+  /// Optional choices shown as a dropdown on the review screen; when empty
+  /// the row is hidden and [transactionType] is used as-is.
+  final List<String> transactionTypes;
+
+  /// Run the guided liveness challenge (turn head left/right + countdown)
+  /// during selfie capture.
+  final bool requireLiveness;
+
+  /// Show the Photo Instructions screen before opening the camera.
+  final bool showGuidelines;
+
   /// Selfie capture settings.
   final SelfieCaptureConfig captureConfig;
 
@@ -47,6 +58,9 @@ class VerificationConfig {
     this.enforceFaceComparison = true,
     this.livenessPassed,
     this.transactionType,
+    this.transactionTypes = const [],
+    this.requireLiveness = true,
+    this.showGuidelines = true,
     this.captureConfig = const SelfieCaptureConfig(),
   });
 
@@ -55,6 +69,9 @@ class VerificationConfig {
         'enforceFaceComparison': enforceFaceComparison,
         'livenessPassed': livenessPassed,
         'transactionType': transactionType,
+        'transactionTypes': transactionTypes,
+        'requireLiveness': requireLiveness,
+        'showGuidelines': showGuidelines,
         'captureMode': captureConfig.captureMode.name,
         'initialCamera': captureConfig.initialCamera.name,
         'allowCameraSwitch': captureConfig.allowCameraSwitch,

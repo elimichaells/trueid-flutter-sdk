@@ -244,6 +244,9 @@ Future<void> readChip(String documentNumber, String dob, String doe) async {
 | `forceNia` | `bool` | `false` | Force NIA lookup even if local match exists |
 | `enforceFaceComparison` | `bool` | `true` | Require face match on local lookups |
 | `transactionType` | `String?` | `null` | Optional label for your records |
+| `transactionTypes` | `List<String>` | `[]` | Optional dropdown choices on the review screen |
+| `requireLiveness` | `bool` | `true` | Guided liveness challenge (turn head left/right + countdown) |
+| `showGuidelines` | `bool` | `true` | Photo Instructions screen before the camera |
 | `captureConfig` | `SelfieCaptureConfig` | default | Selfie camera settings |
 
 ### VerificationResult

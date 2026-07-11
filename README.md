@@ -6,6 +6,7 @@ A Flutter plugin for identity verification via Ghana Card (NIA). Captures a self
 
 - **Hosted document verification** — document capture + selfie with liveness via TrueID's hosted flow in a Chrome Custom Tab, one Dart call, same UI/UX as the TrueID web widget
 - End-to-end verification — PIN entry, selfie capture, and NIA verification in one call
+- **Fast Track verification** — re-verify a known individual with a fresh live selfie and server-side face match
 - **NFC chip reading** — reads the ICAO 9303 chip on Ghana Card / ePassport-style documents (BAC/PACE, DG1/DG2/DG7/DG11) for stronger-than-OCR accuracy
 - Standalone selfie capture — Use just the camera + face detection
 - ML Kit face detection with real-time alignment guidance
@@ -173,7 +174,30 @@ Future<void> takeSelfie() async {
 }
 ```
 
-### 5. NFC Chip Read
+### 5. Fast Track Verification
+
+Use Fast Track when your authenticated backend has already selected the
+individual to re-verify. Pass its internal `individualId` to the SDK; the SDK
+does not expose person search from a mobile device, so organization customer
+data is not discoverable in the app.
+
+```dart
+final result = await TrueIdSdk.fastTrackVerify(
+  config: FastTrackVerificationConfig(
+    individualId: individualIdFromYourBackend,
+  ),
+);
+
+if (result?.isSuccess == true) {
+  print('Fast Track record: ${result!.scanRecordId}');
+}
+```
+
+By default, capture mode and active head-turn liveness follow the
+organization's server policy. If active liveness is off, passive anti-spoof
+checks still use the submitted burst frames.
+
+### 6. NFC Chip Read
 
 Reads the ICAO 9303 chip on Ghana Card / ePassport-style documents. The three BAC key fields normally come from a prior MRZ camera scan. There is no browser/widget equivalent — Web NFC cannot perform the ISO 7816 APDU exchanges an ICAO 9303 chip requires, so this is native-only.
 
@@ -215,6 +239,7 @@ Future<void> readChip(String documentNumber, String dob, String doe) async {
 | `initialize({secretKey, publishableKey, environment, customBaseUrl})` | Initialize with your API key(s). `secretKey` is required for `verify()`/`captureSelfie()`; `publishableKey` is required for `launchHostedVerification()`. Call once before use. |
 | `launchHostedVerification({config})` | Launch the hosted document verification flow. Returns `HostedVerificationResult` (check `.status` for `"CANCELLED"`). |
 | `verify({config})` | Launch full native verification flow. Returns `VerificationResult?`. |
+| `fastTrackVerify({config})` | Capture a live selfie and re-verify a known server-selected individual. Returns `FastTrackVerificationResult?`. |
 | `captureSelfie({config})` | Launch standalone selfie capture. Returns `SelfieCaptureResult?`. |
 | `isNfcSupported()` | Whether this device has NFC hardware at all. |
 | `isNfcEnabled()` | Whether NFC hardware is present and switched on. |
@@ -273,6 +298,23 @@ Future<void> readChip(String documentNumber, String dob, String doe) async {
 | `niaPhotoUrl` | `String?` | URL of NIA photo on file |
 | `errorMessage` | `String?` | Error description (if failed) |
 | `errorCode` | `String?` | Error code (if failed) |
+
+### FastTrackVerificationConfig
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `individualId` | `String` | Required internal individual ID from your authenticated backend. |
+| `useOrganizationCaptureSettings` | `bool` | Default `true`; applies the organization capture/liveness policy. |
+| `requireLiveness` | `bool` | Used only when organization settings are disabled; defaults to `true`. |
+| `captureConfig` | `SelfieCaptureConfig` | Optional local camera behaviour. |
+
+### FastTrackVerificationResult
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `verified` / `isSuccess` | `bool` | Whether the face match and server verification completed. |
+| `scanRecordId` | `String?` | New verification record id. |
+| `message` | `String?` | Server completion message. |
 
 ### NfcReadConfig
 

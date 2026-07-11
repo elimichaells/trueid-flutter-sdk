@@ -11,6 +11,15 @@ dependencies:
   shared_preferences: ^2.3.0
   trueid_sdk:
     path: ../
+  trueid_document_sdk:
+    path: ../../trueid_document_sdk
+
+# trueid_document_sdk depends on the hosted (pub.dev) trueid_sdk, but this
+# example needs the local, not-yet-published dual-key version — override so
+# pub resolves both to the same local path.
+dependency_overrides:
+  trueid_sdk:
+    path: ../
 
 flutter:
   uses-material-design: true

@@ -72,6 +72,34 @@ class TrueIdSdk {
     }
   }
 
+  /// Re-verify a known individual with a fresh live selfie.
+  ///
+  /// Your authenticated backend must supply [FastTrackVerificationConfig.individualId].
+  /// The SDK captures the selfie, applies the institution's capture/liveness
+  /// setting by default, and sends it to the server for face matching. Passive
+  /// anti-spoof checks remain enabled when active head-turn liveness is off.
+  ///
+  /// This operation requires a secret key because it creates a verification
+  /// record and deducts the Fast Track module credit. For production mobile
+  /// apps, prefer initialising with a short-lived server-issued credential.
+  static Future<FastTrackVerificationResult?> fastTrackVerify({
+    required FastTrackVerificationConfig config,
+  }) async {
+    try {
+      final result =
+          await _channel.invokeMethod('fastTrackVerify', config.toMap());
+      if (result == null) return null;
+      return FastTrackVerificationResult.fromMap(
+        Map<dynamic, dynamic>.from(result),
+      );
+    } on PlatformException catch (e) {
+      throw TrueIdException(
+        code: e.code,
+        message: e.message ?? 'Fast Track verification failed',
+      );
+    }
+  }
+
   /// Launch standalone selfie capture (no verification).
   ///
   /// Does not require [initialize] to be called first.

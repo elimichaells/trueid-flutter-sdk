@@ -1,3 +1,19 @@
+## 2.0.0
+
+* **BREAKING:** `TrueIdSdk.initialize()` now takes `secretKey` and/or
+  `publishableKey` instead of a single `apiKey`. The two keys are not
+  interchangeable server-side: `verify()`/`captureSelfie()`/`fastTrackVerify()`
+  use the secret key, `launchHostedVerification()` uses the publishable key.
+  Migration: `initialize(apiKey: k)` → `initialize(secretKey: k)` (and add
+  your publishable key if you use the hosted flow).
+* Added `TrueIdSdk.fastTrackVerify()` — re-verify a known individual with a
+  fresh live selfie and server-side face match. Your backend supplies the
+  `individualId`; capture mode and liveness follow the organization's policy.
+* Guided liveness ring now fills toward the side the user is asked to turn,
+  and the fill animates smoothly instead of stepping.
+* Review screen no longer mirror-flips the captured selfie.
+* Native dependency: `trueid-selfie-sdk` bumped to 2.5.0.
+
 ## 1.3.0
 
 * Native NIA verification flow rebuilt to exactly match the TrueID field app:

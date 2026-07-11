@@ -1,6 +1,6 @@
 name: trueid_sdk
 description: Flutter plugin for TrueID identity verification via Ghana Card (NIA). Captures selfie with face detection and verifies against NIA records.
-version: 1.3.0
+version: 2.0.0
 homepage: https://github.com/elimichaells/trueid-flutter-sdk
 repository: https://github.com/elimichaells/trueid-flutter-sdk
 issue_tracker: https://github.com/elimichaells/trueid-flutter-sdk/issues

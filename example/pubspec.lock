@@ -168,6 +168,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  trueid_document_sdk:
+    dependency: "direct main"
+    description:
+      path: "../../trueid_document_sdk"
+      relative: true
+    source: path
+    version: "1.0.0"
   trueid_sdk:
     dependency: "direct main"
     description:

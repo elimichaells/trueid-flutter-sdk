@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trueid_sdk/trueid_sdk.dart';
+import 'package:trueid_document_sdk/trueid_document_sdk.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,7 @@ class _HomePageState extends State<HomePage> {
   VerificationResult? _result;
   HostedVerificationResult? _hostedResult;
   NfcReadResult? _nfcResult;
+  DocumentVerificationResult? _docResult;
 
   @override
   void initState() {
@@ -83,13 +85,15 @@ class _HomePageState extends State<HomePage> {
 
   bool _requireSecretKey() {
     if (_secretKey.isNotEmpty) return true;
-    setState(() => _status = 'Native NIA Verification needs your SECRET key — tap ⚙ first');
+    setState(() => _status =
+        'Native NIA Verification needs your SECRET key — tap ⚙ first');
     return false;
   }
 
   bool _requirePublishableKey() {
     if (_publishableKey.isNotEmpty) return true;
-    setState(() => _status = 'Hosted Verification needs your PUBLISHABLE key — tap ⚙ first');
+    setState(() => _status =
+        'Hosted Verification needs your PUBLISHABLE key — tap ⚙ first');
     return false;
   }
 
@@ -234,6 +238,29 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _verifyStandardDocument() async {
+    if (!_requireSecretKey()) return;
+    setState(() => _status = 'Opening document verification...');
+
+    try {
+      final result = await TrueIdDocumentSdk.verifyDocument();
+
+      if (result == null) {
+        setState(() => _status = 'Cancelled');
+        return;
+      }
+
+      setState(() {
+        _docResult = result;
+        _status = result.isSuccess
+            ? 'Verified: ${result.fullName}'
+            : 'Failed: ${result.errorMessage}';
+      });
+    } on TrueIdDocumentException catch (e) {
+      setState(() => _status = 'Error: ${e.message}');
+    }
+  }
+
   Future<void> _captureSelfie() async {
     setState(() => _status = 'Capturing...');
 
@@ -281,7 +308,9 @@ class _HomePageState extends State<HomePage> {
 
       setState(() {
         _nfcResult = result;
-        _status = result != null ? 'Chip read: ${result.firstName} ${result.lastName}' : 'Cancelled';
+        _status = result != null
+            ? 'Chip read: ${result.firstName} ${result.lastName}'
+            : 'Cancelled';
       });
     } on TrueIdException catch (e) {
       setState(() => _status = 'NFC error: ${e.code} - ${e.message}');
@@ -301,7 +330,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -316,6 +345,11 @@ class _HomePageState extends State<HomePage> {
             OutlinedButton(
               onPressed: _verify,
               child: const Text('Native NIA Verification'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: _verifyStandardDocument,
+              child: const Text('Native Document Verification'),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
@@ -348,6 +382,16 @@ class _HomePageState extends State<HomePage> {
               Text('DOB: ${_result!.dateOfBirth ?? 'N/A'}'),
               Text('Gender: ${_result!.gender ?? 'N/A'}'),
               Text('Nationality: ${_result!.nationality ?? 'N/A'}'),
+            ],
+            if (_docResult != null) ...[
+              const SizedBox(height: 24),
+              const Divider(),
+              Text('Scan Record: ${_docResult!.scanRecordId ?? 'N/A'}'),
+              Text('Name: ${_docResult!.fullName ?? 'N/A'}'),
+              Text('Document: ${_docResult!.documentNumber ?? 'N/A'}'),
+              Text('Nationality: ${_docResult!.nationality ?? 'N/A'}'),
+              Text('Phone: ${_docResult!.phoneNumber ?? 'N/A'}'),
+              Text('Email: ${_docResult!.email ?? 'N/A'}'),
             ],
           ],
         ),

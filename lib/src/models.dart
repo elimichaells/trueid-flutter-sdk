@@ -198,6 +198,63 @@ class VerificationResult {
       'VerificationResult(verified: $verified, fullName: $fullName, documentNumber: $documentNumber)';
 }
 
+/// Configuration for Fast Track re-verification of a known individual.
+///
+/// Obtain [individualId] from your authenticated backend. The SDK deliberately
+/// does not provide a mobile-side person search, which would risk exposing an
+/// organization's customer data.
+class FastTrackVerificationConfig {
+  final String individualId;
+  final bool useOrganizationCaptureSettings;
+  final bool requireLiveness;
+  final SelfieCaptureConfig captureConfig;
+
+  const FastTrackVerificationConfig({
+    required this.individualId,
+    this.useOrganizationCaptureSettings = true,
+    this.requireLiveness = true,
+    this.captureConfig = const SelfieCaptureConfig(),
+  });
+
+  Map<String, dynamic> toMap() => {
+        'individualId': individualId,
+        'useOrganizationCaptureSettings': useOrganizationCaptureSettings,
+        'requireLiveness': requireLiveness,
+        'captureMode': captureConfig.captureMode.name,
+        'initialCamera': captureConfig.initialCamera.name,
+        'allowCameraSwitch': captureConfig.allowCameraSwitch,
+        'showFaceMesh': captureConfig.showFaceMesh,
+        'outputWidth': captureConfig.outputWidth,
+        'outputHeight': captureConfig.outputHeight,
+        'jpegQuality': captureConfig.jpegQuality,
+        'burstFrameCount': captureConfig.burstFrameCount,
+        'burstFrameDelayMs': captureConfig.burstFrameDelayMs,
+      };
+}
+
+/// Result of a Fast Track facial re-verification.
+class FastTrackVerificationResult {
+  final bool verified;
+  final String? scanRecordId;
+  final String? message;
+
+  const FastTrackVerificationResult({
+    required this.verified,
+    this.scanRecordId,
+    this.message,
+  });
+
+  bool get isSuccess => verified;
+
+  factory FastTrackVerificationResult.fromMap(Map<dynamic, dynamic> map) {
+    return FastTrackVerificationResult(
+      verified: map['verified'] as bool? ?? false,
+      scanRecordId: map['scanRecordId'] as String?,
+      message: map['message'] as String?,
+    );
+  }
+}
+
 /// Result of a standalone selfie capture.
 class SelfieCaptureResult {
   /// Raw image bytes (when resultFormat includes BYTE_ARRAY or ALL).

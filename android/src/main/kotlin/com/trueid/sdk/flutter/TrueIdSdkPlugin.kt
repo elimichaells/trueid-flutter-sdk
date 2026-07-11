@@ -6,6 +6,8 @@ import android.content.Intent
 import androidx.activity.ComponentActivity
 import com.trueid.sdk.selfie.CameraFacing
 import com.trueid.sdk.selfie.CaptureMode
+import com.trueid.sdk.selfie.FastTrackVerificationCallback
+import com.trueid.sdk.selfie.FastTrackVerificationConfig
 import com.trueid.sdk.selfie.HostedVerificationCallback
 import com.trueid.sdk.selfie.HostedVerificationConfig
 import com.trueid.sdk.selfie.HostedVerificationResult
@@ -19,6 +21,7 @@ import com.trueid.sdk.selfie.SelfieCaptureConfig
 import com.trueid.sdk.selfie.SelfieCaptureError
 import com.trueid.sdk.selfie.SelfieCaptureResult
 import com.trueid.sdk.selfie.TrueIDHostedVerification
+import com.trueid.sdk.selfie.TrueIDFastTrackVerification
 import com.trueid.sdk.selfie.TrueIDNfcVerification
 import com.trueid.sdk.selfie.TrueIDSdk
 import com.trueid.sdk.selfie.TrueIDSelfieCapture
@@ -77,6 +80,7 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         when (call.method) {
             "initialize" -> handleInitialize(call, result)
             "verify" -> handleVerify(call, result)
+            "fastTrackVerify" -> handleFastTrackVerify(call, result)
             "captureSelfie" -> handleCaptureSelfie(call, result)
             "launchHostedVerification" -> handleLaunchHostedVerification(call, result)
             "isNfcSupported" -> result.success(TrueIDNfcVerification.isNfcSupported(appContext))
@@ -202,6 +206,77 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
 
         TrueIDVerification.launch(currentActivity, config, callback)
+    }
+
+    private fun handleFastTrackVerify(call: MethodCall, result: Result) {
+        val currentActivity = activity
+        if (currentActivity !is ComponentActivity) {
+            result.error("INCOMPATIBLE_ACTIVITY", "Activity must be a ComponentActivity", null)
+            return
+        }
+        if (pendingResult != null) {
+            result.error("ALREADY_ACTIVE", "A verification is already in progress", null)
+            return
+        }
+
+        val individualId = call.argument<String>("individualId")
+        if (individualId.isNullOrBlank()) {
+            result.error("INVALID_ARGUMENT", "individualId is required", null)
+            return
+        }
+        pendingResult = result
+
+        val config = FastTrackVerificationConfig(
+            individualId = individualId,
+            useOrganizationCaptureSettings =
+                call.argument<Boolean>("useOrganizationCaptureSettings") ?: true,
+            requireLiveness = call.argument<Boolean>("requireLiveness") ?: true,
+            captureConfig = SelfieCaptureConfig(
+                captureMode = when (call.argument<String>("captureMode")) {
+                    "manual" -> CaptureMode.MANUAL
+                    else -> CaptureMode.AUTO
+                },
+                initialCamera = when (call.argument<String>("initialCamera")) {
+                    "back" -> CameraFacing.BACK
+                    else -> CameraFacing.FRONT
+                },
+                allowCameraSwitch = call.argument<Boolean>("allowCameraSwitch") ?: true,
+                showFaceMesh = call.argument<Boolean>("showFaceMesh") ?: true,
+                outputWidth = call.argument<Int>("outputWidth") ?: 600,
+                outputHeight = call.argument<Int>("outputHeight") ?: 800,
+                jpegQuality = call.argument<Int>("jpegQuality") ?: 94,
+                burstFrameCount = call.argument<Int>("burstFrameCount") ?: 4,
+                burstFrameDelayMs = (call.argument<Int>("burstFrameDelayMs") ?: 90).toLong(),
+                resultFormat = ResultFormat.BASE64,
+            ),
+        )
+
+        TrueIDFastTrackVerification.launch(currentActivity, config, object : FastTrackVerificationCallback {
+            override fun onCompleted(verificationResult: com.trueid.sdk.selfie.FastTrackVerificationResult) {
+                pendingResult?.success(hashMapOf<String, Any?>(
+                    "verified" to verificationResult.verified,
+                    "scanRecordId" to verificationResult.scanRecordId,
+                    "message" to verificationResult.message,
+                ))
+                pendingResult = null
+            }
+
+            override fun onCancelled() {
+                pendingResult?.success(null)
+                pendingResult = null
+            }
+
+            override fun onError(error: VerificationError) {
+                val code = when (error) {
+                    is VerificationError.SdkNotInitialized -> "SDK_NOT_INITIALIZED"
+                    is VerificationError.NetworkError -> "NETWORK_ERROR"
+                    is VerificationError.ApiError -> error.code ?: "API_ERROR"
+                    is VerificationError.CaptureError -> "CAPTURE_ERROR"
+                }
+                pendingResult?.error(code, error.message, null)
+                pendingResult = null
+            }
+        })
     }
 
     private fun handleCaptureSelfie(call: MethodCall, result: Result) {

@@ -1,5 +1,5 @@
 name: trueid_sdk_example
-description: Example app for the TrueID SDK Flutter plugin.
+description: Example app for the TrueID SDK Flutter packages.
 publish_to: 'none'
 
 environment:
@@ -9,17 +9,23 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.3.0
-  trueid_sdk:
-    path: ../
+  trueid_core:
+    path: ../../trueid_core
+  trueid_nia_sdk:
+    path: ../../trueid_nia_sdk
+  trueid_hosted_sdk:
+    path: ../../trueid_hosted_sdk
   trueid_document_sdk:
     path: ../../trueid_document_sdk
+  trueid_nfc_sdk:
+    path: ../../trueid_nfc_sdk
 
-# trueid_document_sdk depends on the hosted (pub.dev) trueid_sdk, but this
-# example needs the local, not-yet-published dual-key version — override so
-# pub resolves both to the same local path.
+# Every product package depends on the hosted (pub.dev) trueid_core, but this
+# example needs the local, not-yet-published version — override so pub
+# resolves the whole graph to the same local path.
 dependency_overrides:
-  trueid_sdk:
-    path: ../
+  trueid_core:
+    path: ../../trueid_core
 
 flutter:
   uses-material-design: true

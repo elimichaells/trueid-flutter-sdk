@@ -168,6 +168,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  trueid_core:
+    dependency: "direct main"
+    description:
+      path: "../../trueid_core"
+      relative: true
+    source: path
+    version: "1.0.0"
   trueid_document_sdk:
     dependency: "direct main"
     description:
@@ -175,13 +182,27 @@ packages:
       relative: true
     source: path
     version: "1.0.0"
-  trueid_sdk:
+  trueid_hosted_sdk:
     dependency: "direct main"
     description:
-      path: ".."
+      path: "../../trueid_hosted_sdk"
       relative: true
     source: path
-    version: "1.3.0"
+    version: "1.0.0"
+  trueid_nfc_sdk:
+    dependency: "direct main"
+    description:
+      path: "../../trueid_nfc_sdk"
+      relative: true
+    source: path
+    version: "0.9.0"
+  trueid_nia_sdk:
+    dependency: "direct main"
+    description:
+      path: "../../trueid_nia_sdk"
+      relative: true
+    source: path
+    version: "1.0.0"
   vector_math:
     dependency: transitive
     description:

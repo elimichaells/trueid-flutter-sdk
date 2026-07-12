@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:trueid_sdk/trueid_sdk.dart';
+import 'package:trueid_core/trueid_core.dart';
+import 'package:trueid_nia_sdk/trueid_nia_sdk.dart';
+import 'package:trueid_hosted_sdk/trueid_hosted_sdk.dart';
 import 'package:trueid_document_sdk/trueid_document_sdk.dart';
+import 'package:trueid_nfc_sdk/trueid_nfc_sdk.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -186,7 +189,7 @@ class _HomePageState extends State<HomePage> {
     setState(() => _status = 'Opening hosted verification...');
 
     try {
-      final result = await TrueIdSdk.launchHostedVerification(
+      final result = await TrueIdHostedVerification.launch(
         config: const HostedVerificationConfig(mode: 'standard'),
       );
 
@@ -208,7 +211,7 @@ class _HomePageState extends State<HomePage> {
     setState(() => _status = 'Verifying...');
 
     try {
-      final result = await TrueIdSdk.verify(
+      final result = await TrueIdNiaVerification.verify(
         config: const VerificationConfig(
           enforceFaceComparison: true,
           transactionTypes: [
@@ -284,12 +287,12 @@ class _HomePageState extends State<HomePage> {
   Future<void> _readNfc() async {
     setState(() => _status = 'Checking NFC…');
 
-    final supported = await TrueIdSdk.isNfcSupported();
+    final supported = await TrueIdNfc.isSupported();
     if (!supported) {
       setState(() => _status = 'This device has no NFC hardware');
       return;
     }
-    if (!await TrueIdSdk.isNfcEnabled()) {
+    if (!await TrueIdNfc.isEnabled()) {
       setState(() => _status = 'NFC is turned off');
       return;
     }
@@ -298,7 +301,7 @@ class _HomePageState extends State<HomePage> {
 
     try {
       // These three fields normally come from a prior MRZ camera scan.
-      final result = await TrueIdSdk.readNfcChip(
+      final result = await TrueIdNfc.readChip(
         config: const NfcReadConfig(
           documentNumber: 'GHA-000000000',
           dateOfBirth: '900101',

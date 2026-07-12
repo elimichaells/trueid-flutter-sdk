@@ -1,5 +1,28 @@
 # TrueID SDK for Flutter
 
+> ## ⚠️ Discontinued — migrate to the split packages
+>
+> `trueid_sdk` is discontinued on pub.dev. **Existing integrations keep working
+> with no action required** — this package, the API it calls, and the native
+> Maven artifact it depends on are all still live and maintained, so nothing
+> breaks if you stay on `trueid_sdk: ^2.0.0`. There's no forced sunset date.
+>
+> New projects, and anyone who wants smaller installs / independent versioning
+> per product, should use the split packages instead:
+>
+> | This package's API | Use instead |
+> |---|---|
+> | `TrueIdSdk.initialize()`, `captureSelfie()` | [`trueid_core`](https://pub.dev/packages/trueid_core) |
+> | `TrueIdSdk.verify()`, `fastTrackVerify()` | [`trueid_nia_sdk`](https://pub.dev/packages/trueid_nia_sdk) |
+> | `TrueIdSdk.launchHostedVerification()` | [`trueid_hosted_sdk`](https://pub.dev/packages/trueid_hosted_sdk) |
+> | *(new — no old equivalent)* | [`trueid_document_sdk`](https://pub.dev/packages/trueid_document_sdk) — native standard document verification |
+> | `TrueIdSdk.isNfcSupported()`, `isNfcEnabled()`, `readNfcChip()` | Still only here for now — the standalone `trueid_nfc_sdk` package isn't published yet (still under active development). Keep using `trueid_sdk` for NFC until it is. |
+>
+> Migrating is mostly a rename: swap the import and drop the `TrueIdSdk.` /
+> `TrueIdVerification.` prefix for the equivalent call on the new package's own
+> class — method signatures and config objects are unchanged. See each
+> package's own README for full API details.
+
 A Flutter plugin for identity verification via Ghana Card (NIA). Captures a selfie with ML Kit face detection, submits it alongside a Ghana Card PIN to TrueID, and returns the verification result.
 
 ## Features

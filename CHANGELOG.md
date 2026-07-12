@@ -1,3 +1,13 @@
+## Discontinued (no new pub.dev release)
+
+* This package is discontinued on pub.dev in favor of independently-versioned
+  split packages: `trueid_core`, `trueid_nia_sdk`, `trueid_hosted_sdk`,
+  `trueid_document_sdk` (new), and `trueid_nfc_sdk` (not yet published). See
+  the README's migration table.
+* Existing `trueid_sdk: ^2.0.0` integrations are unaffected — the API, the
+  backend, and the native Maven artifact this package depends on all remain
+  live. No forced sunset date.
+
 ## 2.0.0
 
 * **BREAKING:** `TrueIdSdk.initialize()` now takes `secretKey` and/or

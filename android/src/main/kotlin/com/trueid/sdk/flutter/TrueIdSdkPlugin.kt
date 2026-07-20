@@ -15,6 +15,7 @@ import com.trueid.sdk.selfie.NfcReadCallback
 import com.trueid.sdk.selfie.NfcReadConfig
 import com.trueid.sdk.selfie.NfcReadError
 import com.trueid.sdk.selfie.NfcReadResult
+import com.trueid.sdk.selfie.NfcThemeMode
 import com.trueid.sdk.selfie.ResultFormat
 import com.trueid.sdk.selfie.SelfieCaptureCallback
 import com.trueid.sdk.selfie.SelfieCaptureConfig
@@ -410,13 +411,9 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             return
         }
 
-        val documentNumber = call.argument<String>("documentNumber")
-        val dateOfBirth = call.argument<String>("dateOfBirth")
-        val dateOfExpiry = call.argument<String>("dateOfExpiry")
-        if (documentNumber.isNullOrBlank() || dateOfBirth.isNullOrBlank() || dateOfExpiry.isNullOrBlank()) {
-            result.error("INVALID_ARGUMENT", "documentNumber, dateOfBirth and dateOfExpiry are required", null)
-            return
-        }
+        val documentNumber = call.argument<String>("documentNumber").orEmpty()
+        val dateOfBirth = call.argument<String>("dateOfBirth").orEmpty()
+        val dateOfExpiry = call.argument<String>("dateOfExpiry").orEmpty()
 
         pendingResult = result
 
@@ -424,10 +421,22 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             documentNumber = documentNumber,
             dateOfBirth = dateOfBirth,
             dateOfExpiry = dateOfExpiry,
-            title = call.argument<String>("title") ?: "Scan your document chip",
+            title = call.argument<String>("title") ?: "Read your document chip",
             instructions = call.argument<String>("instructions")
-                ?: "Hold your document against the back of your phone and keep it still.",
-            timeoutMs = (call.argument<Int>("timeoutMs") ?: 20000).toLong(),
+                ?: "Place your phone against the document and keep both still once connected.",
+            timeoutMs = (call.argument<Int>("timeoutMs") ?: 60000).toLong(),
+            showReview = call.argument<Boolean>("showReview") ?: true,
+            useOrganizationAppearanceSettings = call.argument<Boolean>("useOrganizationAppearanceSettings") ?: true,
+            themeMode = when (call.argument<String>("themeMode")) {
+                "light" -> NfcThemeMode.LIGHT
+                "dark" -> NfcThemeMode.DARK
+                else -> NfcThemeMode.FOLLOW_SYSTEM
+            },
+            primaryColor = (call.argument<Number>("primaryColor") ?: 0xFF0F2F5A).toInt(),
+            secondaryColor = (call.argument<Number>("secondaryColor") ?: 0xFF22C55E).toInt(),
+            requireDataIntegrity = call.argument<Boolean>("requireDataIntegrity") ?: true,
+            allowMrzCameraScan = call.argument<Boolean>("allowMrzCameraScan") ?: true,
+            allowManualEntry = call.argument<Boolean>("allowManualEntry") ?: true,
         )
 
         val callback = object : NfcReadCallback {
@@ -445,6 +454,11 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     "personalNumber" to nfcResult.personalNumber,
                     "photoBase64" to nfcResult.photoBase64,
                     "signatureBase64" to nfcResult.signatureBase64,
+                    "accessProtocol" to nfcResult.accessProtocol,
+                    "dataIntegrityVerified" to nfcResult.dataIntegrityVerified,
+                    "documentSignatureVerified" to nfcResult.documentSignatureVerified,
+                    "verifiedDataGroups" to nfcResult.verifiedDataGroups,
+                    "warnings" to nfcResult.warnings,
                 )
                 pendingResult?.success(map)
                 pendingResult = null
@@ -457,9 +471,11 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
             override fun onError(error: NfcReadError) {
                 val code = when (error) {
+                    is NfcReadError.InvalidInput -> "NFC_INVALID_INPUT"
                     is NfcReadError.NfcNotSupported -> "NFC_NOT_SUPPORTED"
                     is NfcReadError.NfcDisabled -> "NFC_DISABLED"
                     is NfcReadError.Timeout -> "NFC_TIMEOUT"
+                    is NfcReadError.SecurityVerificationFailed -> "NFC_SECURITY_VERIFICATION_FAILED"
                     is NfcReadError.ReadFailed -> "NFC_READ_FAILED"
                 }
                 pendingResult?.error(code, error.message, null)

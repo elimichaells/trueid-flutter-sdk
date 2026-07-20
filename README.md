@@ -343,12 +343,19 @@ Future<void> readChip(String documentNumber, String dob, String doe) async {
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `documentNumber` | `String` | required | BAC key field, from a prior MRZ scan |
-| `dateOfBirth` | `String` | required | BAC key field, `yyMMdd` |
-| `dateOfExpiry` | `String` | required | BAC key field, `yyMMdd` |
-| `title` | `String` | `'Scan your document chip'` | Screen title |
+| `documentNumber` | `String` | `''` | Optional MRZ document number; empty starts native BAC-key acquisition |
+| `dateOfBirth` | `String` | `''` | Optional BAC key field, `yyMMdd` |
+| `dateOfExpiry` | `String` | `''` | Optional BAC key field, `yyMMdd` |
+| `title` | `String` | `'Read your document chip'` | Screen title |
 | `instructions` | `String` | default copy | Screen body text |
-| `timeoutMs` | `int` | `20000` | How long to wait for a chip before reporting `NFC_TIMEOUT` |
+| `timeoutMs` | `int` | `60000` | How long to wait for a chip before offering a retry |
+| `showReview` | `bool` | `true` | Show the SDK confirmation screen before returning |
+| `useOrganizationAppearanceSettings` | `bool` | `true` | Apply organization theme and brand colors |
+| `themeMode` | `NfcThemeMode` | `followSystem` | Local light/dark/system fallback |
+| `primaryColor` / `secondaryColor` | `int` | TrueID defaults | Local brand-color fallbacks |
+| `requireDataIntegrity` | `bool` | `true` | Require valid EF.SOD hashes and document signature |
+| `allowMrzCameraScan` | `bool` | `true` | Offer checksum-validated on-device MRZ scanning |
+| `allowManualEntry` | `bool` | `true` | Offer structured manual BAC-key entry |
 
 ### NfcReadResult
 
@@ -362,6 +369,11 @@ Future<void> readChip(String documentNumber, String dob, String doe) async {
 | `personalNumber` | `String` | From DG1, falling back to DG11 |
 | `photoBase64` | `String?` | Face image (DG2), PNG bytes base64-encoded |
 | `signatureBase64` | `String?` | Signature image (DG7), when present on the chip |
+| `accessProtocol` | `String` | Negotiated `PACE` or `BAC` channel |
+| `dataIntegrityVerified` | `bool?` | Read data groups matched their EF.SOD hashes |
+| `documentSignatureVerified` | `bool?` | EF.SOD signature verified with its embedded signing certificate |
+| `verifiedDataGroups` | `List<int>` | Data-group numbers verified against EF.SOD |
+| `warnings` | `List<String>` | Non-fatal omissions and trust limitations |
 
 ### Environments
 

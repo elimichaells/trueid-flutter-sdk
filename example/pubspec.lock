@@ -174,21 +174,21 @@ packages:
       path: "../../trueid_core"
       relative: true
     source: path
-    version: "1.0.0"
+    version: "1.0.2"
   trueid_document_sdk:
     dependency: "direct main"
     description:
       path: "../../trueid_document_sdk"
       relative: true
     source: path
-    version: "1.0.0"
+    version: "1.0.1"
   trueid_hosted_sdk:
     dependency: "direct main"
     description:
       path: "../../trueid_hosted_sdk"
       relative: true
     source: path
-    version: "1.0.0"
+    version: "1.0.1"
   trueid_nfc_sdk:
     dependency: "direct main"
     description:
@@ -202,7 +202,7 @@ packages:
       path: "../../trueid_nia_sdk"
       relative: true
     source: path
-    version: "1.0.0"
+    version: "1.0.2"
   vector_math:
     dependency: transitive
     description:

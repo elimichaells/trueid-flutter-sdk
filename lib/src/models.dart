@@ -401,6 +401,8 @@ class TrueIdException implements Exception {
 ///
 /// NFC chip reads only run natively — there is no browser/widget equivalent,
 /// since Web NFC cannot perform ISO 7816 APDU exchanges.
+enum NfcThemeMode { light, dark, followSystem }
+
 class NfcReadConfig {
   final String documentNumber;
 
@@ -413,15 +415,31 @@ class NfcReadConfig {
   final String title;
   final String instructions;
   final int timeoutMs;
+  final bool showReview;
+  final bool useOrganizationAppearanceSettings;
+  final NfcThemeMode themeMode;
+  final int primaryColor;
+  final int secondaryColor;
+  final bool requireDataIntegrity;
+  final bool allowMrzCameraScan;
+  final bool allowManualEntry;
 
   const NfcReadConfig({
-    required this.documentNumber,
-    required this.dateOfBirth,
-    required this.dateOfExpiry,
-    this.title = 'Scan your document chip',
+    this.documentNumber = '',
+    this.dateOfBirth = '',
+    this.dateOfExpiry = '',
+    this.title = 'Read your document chip',
     this.instructions =
-        'Hold your document against the back of your phone and keep it still.',
-    this.timeoutMs = 20000,
+        'Place your phone against the document and keep both still once connected.',
+    this.timeoutMs = 60000,
+    this.showReview = true,
+    this.useOrganizationAppearanceSettings = true,
+    this.themeMode = NfcThemeMode.followSystem,
+    this.primaryColor = 0xFF0F2F5A,
+    this.secondaryColor = 0xFF22C55E,
+    this.requireDataIntegrity = true,
+    this.allowMrzCameraScan = true,
+    this.allowManualEntry = true,
   });
 
   Map<String, dynamic> toMap() => {
@@ -431,6 +449,14 @@ class NfcReadConfig {
         'title': title,
         'instructions': instructions,
         'timeoutMs': timeoutMs,
+        'showReview': showReview,
+        'useOrganizationAppearanceSettings': useOrganizationAppearanceSettings,
+        'themeMode': themeMode.name,
+        'primaryColor': primaryColor,
+        'secondaryColor': secondaryColor,
+        'requireDataIntegrity': requireDataIntegrity,
+        'allowMrzCameraScan': allowMrzCameraScan,
+        'allowManualEntry': allowManualEntry,
       };
 }
 
@@ -454,6 +480,18 @@ class NfcReadResult {
   /// Signature image (DG7), PNG bytes base64-encoded, when present on the chip.
   final String? signatureBase64;
 
+  /// Secure access protocol negotiated with the chip (`PACE` or `BAC`).
+  final String accessProtocol;
+
+  /// Whether all data groups read by the SDK matched the hashes in EF.SOD.
+  final bool? dataIntegrityVerified;
+
+  /// Whether EF.SOD's signature verified with its document-signing certificate.
+  /// This is distinct from issuing-country CSCA trust-chain validation.
+  final bool? documentSignatureVerified;
+  final List<int> verifiedDataGroups;
+  final List<String> warnings;
+
   const NfcReadResult({
     required this.firstName,
     required this.lastName,
@@ -467,6 +505,11 @@ class NfcReadResult {
     required this.personalNumber,
     this.photoBase64,
     this.signatureBase64,
+    this.accessProtocol = 'BAC',
+    this.dataIntegrityVerified,
+    this.documentSignatureVerified,
+    this.verifiedDataGroups = const [],
+    this.warnings = const [],
   });
 
   factory NfcReadResult.fromMap(Map<dynamic, dynamic> map) {
@@ -483,6 +526,17 @@ class NfcReadResult {
       personalNumber: map['personalNumber'] as String? ?? '',
       photoBase64: map['photoBase64'] as String?,
       signatureBase64: map['signatureBase64'] as String?,
+      accessProtocol: map['accessProtocol'] as String? ?? 'BAC',
+      dataIntegrityVerified: map['dataIntegrityVerified'] as bool?,
+      documentSignatureVerified: map['documentSignatureVerified'] as bool?,
+      verifiedDataGroups:
+          (map['verifiedDataGroups'] as List<dynamic>? ?? const [])
+              .whereType<num>()
+              .map((value) => value.toInt())
+              .toList(growable: false),
+      warnings: (map['warnings'] as List<dynamic>? ?? const [])
+          .whereType<String>()
+          .toList(growable: false),
     );
   }
 

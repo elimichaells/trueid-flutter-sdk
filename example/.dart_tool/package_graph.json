@@ -19,7 +19,7 @@
     },
     {
       "name": "trueid_core",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": [
         "flutter"
       ]
@@ -34,7 +34,7 @@
     },
     {
       "name": "trueid_document_sdk",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": [
         "flutter",
         "trueid_core"
@@ -42,7 +42,7 @@
     },
     {
       "name": "trueid_hosted_sdk",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": [
         "flutter",
         "trueid_core"
@@ -50,7 +50,7 @@
     },
     {
       "name": "trueid_nia_sdk",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": [
         "flutter",
         "trueid_core"

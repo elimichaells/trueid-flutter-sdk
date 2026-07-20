@@ -292,21 +292,13 @@ class _HomePageState extends State<HomePage> {
       setState(() => _status = 'This device has no NFC hardware');
       return;
     }
-    if (!await TrueIdNfc.isEnabled()) {
-      setState(() => _status = 'NFC is turned off');
-      return;
-    }
-
     setState(() => _status = 'Reading chip…');
 
     try {
-      // These three fields normally come from a prior MRZ camera scan.
       final result = await TrueIdNfc.readChip(
-        config: const NfcReadConfig(
-          documentNumber: 'GHA-000000000',
-          dateOfBirth: '900101',
-          dateOfExpiry: '300101',
-        ),
+        // The native SDK now acquires the BAC keys in Step 1: scan the MRZ
+        // with the camera or enter the three fields manually.
+        config: const NfcReadConfig(),
       );
 
       setState(() {

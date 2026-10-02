@@ -1,3 +1,11 @@
+## Unreleased
+
+* Android: build against `trueid-selfie-sdk:2.7.0` (which pulls
+  `trueid-nfc-sdk:1.1.0`). The NFC config option is now passed to the native
+  SDK as `allowCameraScan` (it was `allowMrzCameraScan`, which no longer
+  exists natively and broke the Android build). The Dart API is unchanged:
+  `allowMrzCameraScan` still works.
+
 ## Discontinued (no new pub.dev release)
 
 * This package is discontinued on pub.dev in favor of independently-versioned

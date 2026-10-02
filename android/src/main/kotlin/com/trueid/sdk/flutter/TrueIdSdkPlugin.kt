@@ -435,7 +435,7 @@ class TrueIdSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             primaryColor = (call.argument<Number>("primaryColor") ?: 0xFF0F2F5A).toInt(),
             secondaryColor = (call.argument<Number>("secondaryColor") ?: 0xFF22C55E).toInt(),
             requireDataIntegrity = call.argument<Boolean>("requireDataIntegrity") ?: true,
-            allowMrzCameraScan = call.argument<Boolean>("allowMrzCameraScan") ?: true,
+            allowCameraScan = call.argument<Boolean>("allowMrzCameraScan") ?: true,
             allowManualEntry = call.argument<Boolean>("allowManualEntry") ?: true,
         )
 

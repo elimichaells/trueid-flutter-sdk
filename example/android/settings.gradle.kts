@@ -27,11 +27,11 @@ plugins {
 
 include(":app")
 
-// Local-only override so this example builds against the sibling native
-// module checkouts before they're live on the hosted Maven repo. Not
-// committed — remove before packaging a release build.
-val liteNfcKycRoot = file("../../../lite_nfc_kyc")
-if (liteNfcKycRoot.exists()) {
+// Develop against the native SDK sources in ../../../trueid-android-sdk
+// when that checkout exists. Pass -PuseMavenTrueidDeps to build against the
+// published artifacts on the TrueID Maven repo instead.
+val trueidAndroidSdkRoot = file("../../../trueid-android-sdk")
+if (trueidAndroidSdkRoot.exists() && !providers.gradleProperty("useMavenTrueidDeps").isPresent) {
     listOf(
         "trueid-core",
         "trueid-nia-sdk",
@@ -40,6 +40,6 @@ if (liteNfcKycRoot.exists()) {
         "trueid-document-sdk",
     ).forEach { module ->
         include(":$module")
-        project(":$module").projectDir = file("$liteNfcKycRoot/$module")
+        project(":$module").projectDir = file("$trueidAndroidSdkRoot/$module")
     }
 }
